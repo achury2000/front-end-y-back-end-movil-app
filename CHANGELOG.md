@@ -11,3 +11,11 @@
 - Mejoras de UI y validaciones en formularios
 - Scripts de ayuda y documentación actualizada
 
+**Release:** `v1.0-delivery` — 2025-11-28
+
+Notas rápidas:
+- Documentación ampliada en `docs/` (fases 1–10 y `states.md`).
+- `README.md` y `README_DELIVERY.md` añadidos/actualizados para la entrega y evaluación.
+- CI: GitHub Actions workflow configurado para `analyze`, `test` y build APK (artifact).
+
+
