@@ -16,7 +16,7 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
     await Future.delayed(Duration(milliseconds: 600));
     _user = mockUsers.firstWhere((u)=>u.id==userId, orElse: ()=>mockUsers.first);
-    // try load persisted profile edits
+    // intentar cargar ediciones de perfil persistidas
     final prefs = await SharedPreferences.getInstance();
     final key = 'profile_${_user!.id}';
     if (prefs.containsKey(key)){

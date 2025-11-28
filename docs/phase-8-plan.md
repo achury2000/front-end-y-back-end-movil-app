@@ -1,6 +1,3 @@
-// parte linsaith
-// parte juanjo
-
 # Fase 8 - Facturación avanzada & Reportes
 
 Objetivo: Añadir facturación formal (facturas/invoices), integrarlas con pagos y permitir exportes/reportes.

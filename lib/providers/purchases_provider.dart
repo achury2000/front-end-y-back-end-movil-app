@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Proveedor para compras (ordenes de compra).
+///
+/// - Mantiene órdenes de compra, persiste en `SharedPreferences` y registra auditoría.
 class PurchasesProvider with ChangeNotifier {
   static const _prefsKey = 'purchases_v1';
   final List<Map<String,dynamic>> _purchases = [];

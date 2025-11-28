@@ -3,6 +3,14 @@
 // parte juanjo
 import 'dart:convert';
 
+/// Modelo que representa una finca (lugar/turístico).
+///
+/// Responsabilidades:
+/// - Contener atributos estáticos de la finca (id, código, nombre, ubicación, precio, imágenes y coordenadas).
+/// - Proveer serialización/deserialización `toJson` / `fromJson` y utilidades para encode/decode de listas.
+///
+/// Notas de implementación:
+/// - `fromJson` intenta parsear de manera defensiva campos numéricos y coordenadas (acepta `num`, `String` o `null`).
 class Finca {
   final String id;
   final String code;

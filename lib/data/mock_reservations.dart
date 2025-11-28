@@ -14,7 +14,7 @@ final List<Map<String, dynamic>> mockReservations = [
   {'id': 'R1013', 'service': 'Paseo a Caballo', 'date': '2025-11-02', 'time': '16:00', 'price': 95000, 'status': 'Activa', 'clientId': 'C1005', 'guideId': 'E2008'},
   {'id': 'R1014', 'service': 'Expedición de Aventura', 'date': '2025-12-15', 'time': '07:30', 'price': 180000, 'status': 'Activa', 'clientId': 'C1003', 'guideId': 'E2007'},
   {'id': 'R1015', 'service': 'Trekking Ligero', 'date': '2025-10-28', 'time': '06:30', 'price': 40000, 'status': 'Completada', 'clientId': 'C1006', 'guideId': 'E2009'},
-  // Additional sample reservations for November 2025 to demonstrate calendar states
+  // Reservas de muestra adicionales para noviembre de 2025 para demostrar estados en el calendario
   {'id': 'R2001', 'service': 'Ruta Demo A', 'date': '2025-11-02', 'time': '10:00', 'price': 60000, 'status': 'Pendiente', 'clientId': 'C2001', 'guideId': 'E2010'},
   {'id': 'R2002', 'service': 'Ruta Demo B', 'date': '2025-11-02', 'time': '16:00', 'price': 60000, 'status': 'Activa', 'clientId': 'C2002', 'guideId': 'E2011'},
   {'id': 'R2003', 'service': 'Ruta Demo C', 'date': '2025-11-09', 'time': '09:00', 'price': 70000, 'status': 'Pendiente', 'clientId': 'C2003', 'guideId': 'E2012'},

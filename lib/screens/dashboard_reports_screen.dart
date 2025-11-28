@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/reports_provider.dart';
 
+/// Pantalla de generación y exportación de reportes.
+///
+/// Permite generar reportes de satisfacción y exportarlos en formatos simulados (PDF/Excel).
 class DashboardReportsScreen extends StatelessWidget {
   static const routeName = '/dashboard/reports';
   @override

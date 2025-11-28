@@ -56,7 +56,7 @@ class ReservationDetailScreen extends StatelessWidget {
           SizedBox(height:6),
           Text(res?['notes'] ?? 'Política de cancelación: ... (simulada)', style: TextStyle(color: Colors.black54)),
           Spacer(),
-          // For admins/asesores allow toggling status
+          // Para admins/asesores: permitir cambiar el estado
           if (auth.user != null && (auth.user?.role == 'admin' || auth.user?.role == 'asesor')) ...[
             Row(children:[
               ElevatedButton(onPressed: () async {
@@ -113,7 +113,7 @@ class ReservationDetailScreen extends StatelessWidget {
               SizedBox(width:12),
             ]),
           ],
-          // Rating UI for clients who own this reservation
+          // UI de valoración para clientes que son propietarios de esta reserva
           if (auth.user != null && ((auth.user?.role ?? '').toLowerCase() == 'cliente' || (auth.user?.role ?? '').toLowerCase() == 'client') && res != null && (res['clientId'] ?? '') == (auth.user?.id ?? '')) ...[
             SizedBox(height:12),
             Text('Calificar esta experiencia', style: TextStyle(fontWeight: FontWeight.w700)),

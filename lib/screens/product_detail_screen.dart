@@ -1,3 +1,6 @@
+// **Pantalla**: Detalle del producto.
+// Muestra información completa del producto/recorrido, galería, stock y acciones de reserva.
+// parte isa
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/products_provider.dart';
@@ -49,7 +52,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               SizedBox(height: 12),
               Text(p.description),
               SizedBox(height:12),
-              // Extra details to enrich the route description
+              // Detalles adicionales para enriquecer la descripción de la ruta
               Card(
                 margin: EdgeInsets.symmetric(vertical:8),
                 child: Padding(
@@ -78,7 +81,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ElevatedButton(onPressed: () async {
                       final prov = Provider.of<ProductsProvider>(context, listen: false);
                       final auth = Provider.of<AuthProvider>(context, listen: false);
-                      // only admin can set reorder level
+                      // solo administradores pueden establecer el umbral de reorden
                       final role = (auth.user?.role ?? '').toLowerCase();
                       if (role != 'admin'){
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Acceso denegado: solo administradores pueden cambiar el umbral')));
@@ -106,7 +109,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
 
               SizedBox(height:8),
-              // Small gallery
+              // Pequeña galería
               Text('Galería', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height:8),
               SizedBox(
@@ -157,7 +160,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     final auth = Provider.of<AuthProvider>(context, listen: false);
                     final redirect = ReservationsFlowScreen.routeName;
                     final redirectArgs = {'id': product!.id, 'qty': _qty, 'variant': _variant};
-                    // only clients can access the reservation flow
+                    // solo clientes pueden acceder al flujo de reservas
                     final allowed = ['cliente','client'];
                     if (auth.isAuthenticated) {
                       final role = (auth.user?.role ?? '').toLowerCase();
@@ -167,7 +170,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Acceso restringido: se necesita una cuenta de cliente.')));
                       }
                     } else {
-                      // not authenticated -> send to login with redirect
+                      // no autenticado -> redirigir al login con destino guardado
                       Navigator.of(context).pushNamed(LoginScreen.routeName, arguments: {'redirect': redirect, 'redirectArgs': redirectArgs, 'allowedRoles': allowed});
                     }
                   },

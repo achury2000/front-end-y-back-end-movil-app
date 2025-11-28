@@ -6,6 +6,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/route.dart';
 
+/// Proveedor para rutas/itinerarios.
+///
+/// Responsabilidades:
+/// - Mantener la colección de `RouteModel` y persistirla en `SharedPreferences`.
+/// - Proveer operaciones CRUD, búsqueda y import/export en formato CSV.
+///
+/// Herencia / Interfaces:
+/// - Mezcla `ChangeNotifier` para notificar cambios a la UI.
+///
+/// Call-sites típicos:
+/// - Utilizado por pantallas de gestión de rutas y para construir recorridos en la UI.
 class RoutesProvider with ChangeNotifier {
   List<RouteModel> _items = [];
   bool _loading = false;
@@ -94,7 +105,7 @@ class RoutesProvider with ChangeNotifier {
     final imported = <RouteModel>[];
     for (final r in rows) {
       var cols = _parseCsvLine(r);
-      // Fallback: if parser merged quoted fields, try to recover when a '","' separator remains
+        // Recuperación: si el parser combinó campos entrecomillados, intentar recuperar cuando queda un separador '","'
       if (cols.length == 3 && cols[2].contains('\",\"')) {
         final parts = cols[2].split('\",\"');
         final newCols = <String>[];
@@ -128,9 +139,11 @@ class RoutesProvider with ChangeNotifier {
   }
 
   List<String> _parseCsvLine(String line) {
-    // Split on commas that are not inside double quotes using a regex.
+    // Parser CSV que divide en comas no entrecomilladas.
+    // - Usa una expresión regular para respetar comillas dobles.
+    // - Devuelve campos descomillados y con comillas dobles internas normalizadas.
     final parts = line.split(RegExp(r',(?=(?:[^"]*"[^"]*")*[^"]*$)'));
-    // Trim and unquote fields
+    // Recortar y descomillar campos
     return parts.map((p) {
       var s = p.trim();
       if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {

@@ -8,6 +8,12 @@ import '../data/mock_products.dart';
 
 enum ProductSort { priceAsc, priceDesc, nameAsc, popularity }
 
+/// Proveedor de productos y gestión de catálogo.
+///
+/// Responsabilidades:
+/// - Cargar/guardar productos en `SharedPreferences`.
+/// - Índice en memoria para búsquedas rápidas, paginación y control de stock.
+/// - Import/Export CSV y registro histórico de stock.
 class ProductsProvider with ChangeNotifier {
   List<Product> _items = [];
   List<Product> _allItems = [];
@@ -16,7 +22,7 @@ class ProductsProvider with ChangeNotifier {
   // In-memory inverted index: token -> set of product ids
   final Map<String, Set<String>> _index = {};
 
-  // simple pagination
+  // paginación simple
   int _page = 0;
   final int _pageSize = 6;
 

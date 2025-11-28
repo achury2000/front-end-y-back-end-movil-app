@@ -25,11 +25,11 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     if (!_inited) {
       _reportsProv = Provider.of<ReportsProvider>(context);
       _reservationsProv = Provider.of<ReservationsProvider>(context);
-      // initial load - schedule after build to avoid notifyListeners during build
+      // carga inicial - programar después del build para evitar notifyListeners durante el build
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _applyFiltersAndRegenerate();
       });
-      // listen for changes
+      // escuchar cambios
       _reservationsProv.addListener(_onReservationsChanged);
       _inited = true;
     }
@@ -42,14 +42,14 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   }
 
   void _onReservationsChanged(){
-    // schedule regeneration after the current frame to avoid calling notifyListeners during build
+    // programar regeneración después del frame actual para evitar llamar notifyListeners durante el build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _applyFiltersAndRegenerate();
     });
   }
 
   void _applyFiltersAndRegenerate(){
-    // compute date range from selected period
+    // calcular rango de fechas desde el periodo seleccionado
     DateTime now = DateTime.now();
     DateTime? from;
     if (_selectedPeriod == 'Último mes') {
@@ -60,7 +60,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
       from = DateTime(now.year, 1, 1);
     }
 
-    // filter reservations by date and (optionally) location
+    // filtrar reservaciones por fecha y (opcionalmente) por ubicación
     final all = _reservationsProv.reservations;
     final filtered = all.where((r){
       try{
@@ -112,7 +112,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   }
 
   Future<void> _exportCsv() async {
-    // Build CSV from reservations
+    // Construir CSV a partir de reservaciones
     final reservations = _reservationsProv.reservations;
     final sb = StringBuffer();
     sb.writeln('id,service,date,time,price,status,clientId,guideId,rating,comment');
@@ -152,7 +152,10 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         SizedBox(height:12),
         Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Tendencia Mensual (Ingresos)', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:8), _monthlyChart(monthly)]))),
         SizedBox(height:12),
-        Row(children:[Expanded(child: Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Demanda por Ubicación', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:12), Container(height:120, child: Center(child: Text('Bar chart placeholder')))])))), SizedBox(width:12), Expanded(child: Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Análisis por Tipo de Experiencia', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:8), ListTile(title: Text('Rutas'), subtitle: LinearProgressIndicator(value: 0.7, color: Colors.green, backgroundColor: Colors.green.shade100), trailing: Text('4.7')), ListTile(title: Text('Fincas'), subtitle: LinearProgressIndicator(value: 0.5, color: Colors.green, backgroundColor: Colors.green.shade100), trailing: Text('4.6'))]))))]),
+        Row(children:[
+          Expanded(child: Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Demanda por Ubicación', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:12), Container(height:120, child: Center(child: Text('Espacio reservado para gráfico de barras')))])))),
+          SizedBox(width:12),
+          Expanded(child: Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Análisis por Tipo de Experiencia', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:8), ListTile(title: Text('Rutas'), subtitle: LinearProgressIndicator(value: 0.7, color: Colors.green, backgroundColor: Colors.green.shade100), trailing: Text('4.7')), ListTile(title: Text('Fincas'), subtitle: LinearProgressIndicator(value: 0.5, color: Colors.green, backgroundColor: Colors.green.shade100), trailing: Text('4.6'))]))))]),
         SizedBox(height:24),
         // Satisfaction & NPS
         SizedBox(height:12),

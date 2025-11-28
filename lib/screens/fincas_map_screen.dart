@@ -8,6 +8,16 @@ import 'package:provider/provider.dart';
 import '../providers/fincas_provider.dart';
 import '../models/finca.dart';
 
+/// Pantalla con mapa interactivo de fincas usando `flutter_map`.
+///
+/// Responsabilidades:
+/// - Mostrar marcadores para fincas con coordenadas y permitir acciones rápidas (ver detalle, reservar).
+///
+/// Herencia / Overrides:
+/// - Extiende `StatefulWidget` y su `State` llama a `FincasProvider.loadAll()` en `initState`.
+///
+/// Call-sites típicos:
+/// - Accedida desde el menú o navegaciones que muestran el mapa global de fincas.
 class FincasMapScreen extends StatefulWidget {
   static const routeName = '/fincas/map';
   @override

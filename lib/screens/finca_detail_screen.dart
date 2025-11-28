@@ -5,6 +5,14 @@ import 'package:provider/provider.dart';
 import '../providers/fincas_provider.dart';
 import '../providers/services_provider.dart';
 
+/// Pantalla que muestra detalle de una finca.
+///
+/// Responsabilidades:
+/// - Mostrar información básica de la `Finca` (nombre, código, ubicación, servicios, precio, etc.).
+/// - Proveer la acción de reservar que navega a la pantalla de creación de reservas.
+///
+/// Herencia / Interfaces:
+/// - Extiende `StatelessWidget` y espera recibir el `id` de la finca como argumento de la ruta.
 class FincaDetailScreen extends StatelessWidget {
   static const routeName = '/fincas/detail';
   @override

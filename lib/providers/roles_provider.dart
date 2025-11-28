@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/mock_roles.dart';
 
+/// Proveedor para roles y permisos del sistema.
+///
+/// - Mantiene roles con sus permisos, activa/desactiva roles y registra auditoría.
 class RolesProvider with ChangeNotifier {
   static const _prefsKey = 'roles';
 

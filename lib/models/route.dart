@@ -3,6 +3,14 @@
 // parte juanjo
 import 'dart:convert';
 
+/// Modelo que representa una ruta/itinerario.
+///
+/// Responsabilidades:
+/// - Contener metadatos sobre una ruta (lista ordenada de `fincaIds`, duración estimada, distancia, coordenadas opcionales).
+/// - Proveer serialización/deserialización y utilidades para encode/decode de listas.
+///
+/// Notas de implementación:
+/// - `fromJson` parsea de forma defensiva campos numéricos y coordenadas (acepta `num`, `String` o `null`).
 class RouteModel {
   final String id;
   final String code;

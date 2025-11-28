@@ -3,6 +3,14 @@
 import 'dart:convert';
 import '../utils/date_utils.dart';
 
+/// Modelo que representa una reseña (review) realizada por un usuario.
+///
+/// Responsabilidades:
+/// - Contener metadatos de la reseña (objetivo, autor, puntuación, comentario y timestamp).
+/// - Serialización/Deserialización desde mapas; `fromMap` usa `parseDateFlexible` para aceptar múltiples formatos de fecha.
+///
+/// Call-sites típicos:
+/// - Creación desde UI cuando un usuario deja una reseña y lectura para mostrar listados de valoraciones.
 class Review {
   final String id;
   final String targetId; // id de finca o servicio

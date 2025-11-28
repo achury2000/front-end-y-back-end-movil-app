@@ -5,6 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/date_utils.dart';
 import '../data/mock_reservations.dart';
 
+/// Gestiona las reservas de la aplicación.
+///
+/// Responsabilidades:
+/// - Mantiene la lista de reservas en memoria y la persiste en `SharedPreferences`.
+/// - Provee operaciones CRUD (crear, actualizar, eliminar), import/export CSV y audit trail.
+/// - Realiza validaciones de negocio (por ejemplo: duplicidad de programación, reglas de eliminación).
+///
+/// Herencia / Interfaces:
+/// - Mezcla `ChangeNotifier` para notificar cambios a los listeners (UI/providers).
+///
+/// Call-sites típicos:
+/// - Instanciada en el árbol de providers y consumida por pantallas como creación/gestión de reservas,
+///   pantallas de detalle y formularios (ej. `reservations_create_screen.dart`, `finca_detail_screen.dart`).
 class ReservationsProvider with ChangeNotifier {
   static const _prefsKey = 'reservations';
 
@@ -143,7 +156,7 @@ class ReservationsProvider with ChangeNotifier {
     }
   }
 
-  // Search and filters
+  // Búsqueda y filtros
   List<Map<String,dynamic>> search({String? query, String? service, String? status, DateTime? from, DateTime? to, String? clientId}){
     Iterable<Map<String,dynamic>> res = _reservations;
     if (clientId != null) res = res.where((r) => (r['clientId'] ?? '') == clientId);
@@ -187,7 +200,7 @@ class ReservationsProvider with ChangeNotifier {
 
   /// Replace current reservations with the default mock data and persist.
   Future<void> resetToMock({bool confirm = true}) async {
-    // confirm flag left for API compatibility; callers can call without confirm
+    // El flag `confirm` se deja por compatibilidad de API; los llamadores pueden invocar sin confirmación
     _reservations = List<Map<String,dynamic>>.from(mockReservations);
     _audit.insert(0, {'action': 'reset_to_mock', 'count': _reservations.length, 'timestamp': DateTime.now().toIso8601String()});
     await _saveToPrefs();
@@ -201,8 +214,8 @@ class ReservationsProvider with ChangeNotifier {
     try{ return _reservations.firstWhere((r)=> r['id']==id); } catch(_) { return null; }
   }
 
-  /// Returns true if there is an existing reservation with the same service+date+time.
-  /// If [excludeId] is provided, that reservation id will be ignored (useful for updates).
+  /// Devuelve true si existe una reserva con el mismo servicio+fecha+hora.
+  /// Si se provee [excludeId], esa reserva será ignorada (útil al actualizar).
   bool existsSameSchedule({String? service, String? date, String? time, String? excludeId}){
     if (service == null || date == null || time == null) return false;
     final sNorm = service.toLowerCase();

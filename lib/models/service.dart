@@ -1,6 +1,13 @@
 // parte isa
 // parte linsaith
 // parte juanjo
+/// Modelo que representa un servicio ofrecido en una finca.
+///
+/// Responsabilidades:
+/// - Mantener datos de un servicio (duración, capacidad, precio, activo) y proveer conversión desde/hacia mapas.
+///
+/// Notas de implementación:
+/// - `fromMap` parsea de forma defensiva campos numéricos y booleanos provenientes de CSV/JSON.
 class Service {
   String id;
   String name;

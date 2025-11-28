@@ -1,50 +1,60 @@
-# Occitours - Flutter demo
+# Occitours — Guía de entrega (versión para evaluación)
 
-Proyecto de demostración que implementa gestión de estados para una app móvil de e-commerce/turismo (Occitours).
+Breve: app Flutter de demostración para catálogos, servicios y reservas. Este README cubre lo que el profesor necesita: instalación, uso, pruebas y decisiones técnicas.
 
-Instrucciones rápidas:
+---
 
-- Instalar Flutter SDK y tenerlo en PATH.
-- Desde la carpeta del proyecto ejecutar:
+## Contenido del repositorio
 
-```bash
-flutter pub get
-flutter run
-```
+- `lib/`: código fuente (models, providers, screens, widgets).
+- `data/`: datos mock usados por la app y tests.
+- `providers/`: lógica de estado y reglas de negocio.
+- `test/`: pruebas unitarias y widget tests; `test/test_helpers.dart` prepara el entorno.
+- `docs/`: documentación y fases del proyecto (`phase-1..10.md`, `states.md`).
+- `README_DELIVERY.md`: guía rápida pensada para el corrector (cuentas de prueba y script de demo).
 
-Ejecutar en un emulador Android automáticamente
+---
 
-Si tienes varios emuladores/ dispositivos y quieres que el proyecto se lance
-en el primer emulador Android detectado sin tener que pasar el id manualmente,
-puedes usar el script PowerShell incluido:
+## Requisitos mínimos
+
+- Flutter SDK (stable) instalado y en `PATH`.
+- Emulador Android o dispositivo conectado. (En macOS se puede usar emulador iOS).
+
+---
+
+## Instalación y ejecución (PowerShell)
 
 ```powershell
+Set-Location 'C:\Users\USER\Desktop\app-de-occitours-main'
+flutter pub get
+flutter run
+
+# Alternativa: intentar lanzar el primer emulador Android disponible
 .\run_on_first_android_emulator.ps1
 ```
 
-El script detecta un dispositivo Android (emulator-XXXX o cualquier dispositivo
-con plataforma `android`) y ejecuta `flutter run -d <deviceId>`. Si no hay
-dispositivos Android, simplemente ejecuta `flutter run` y te pedirá elegir uno.
+---
 
+## Cuentas de prueba (mock)
 
- Arquitectura y notas:
- - Stack: Flutter + Provider
- - Datos mock en `lib/data/` y simulación asíncrona con `Future.delayed`
- - Providers en `lib/providers/`
- - Modelos en `lib/models/`
+- Admin: `admin@example.com` / `123456` (rol `admin`)
+- Cliente: `client@example.com` / `123456` (rol `cliente`)
 
-## Fase 6 - Control de stock y CSV
+Las cuentas están en `lib/data/mock_users.dart` si necesitas revisarlas o cambiarlas.
 
-Se añadió control de stock avanzado y utilidades CSV en esta rama:
+---
 
-- Historial de stock por producto (se guarda en `SharedPreferences` con la clave `stock_history_v1`).
-- Niveles de reorden (umbral) por producto y pantalla para ver productos con stock bajo.
-- Import / Export CSV sencillo para productos desde la UI (`Import/Export Productos`).
-- Integración: al marcar una compra como "Recibido" se actualiza el stock y se registra en el historial.
+## Flujo sugerido para demo (2–4 minutos)
 
-## Ejecutar tests y verificación
+1. Login con `admin@example.com` → Panel admin → crear un servicio/producto.
+2. Logout → Login con `client@example.com` → buscar producto → abrir detalle → reservar.
+3. Ir a Carrito → simular checkout.
 
-Hay tests unitarios que cubren productos, búsquedas y compras. Para ejecutar todo desde PowerShell:
+Un guion más detallado y checklist están en `README_DELIVERY.md`.
+
+---
+
+## Ejecutar tests
 
 ```powershell
 Set-Location 'C:\Users\USER\Desktop\app-de-occitours-main'
@@ -53,32 +63,45 @@ flutter analyze
 flutter test
 ```
 
-También hay un script rápido que ejecuta `flutter analyze` y `flutter test`:
+Consejos:
+- Usa `initTestEnvironment()` de `test/test_helpers.dart` en widget tests para mockear `SharedPreferences` y requests fuera de la app.
+- Para pruebas rápidas, corre tests unitarios específicos: `flutter test test/unit/services_provider_test.dart`.
 
-```powershell
-.\scripts\run_tests.ps1
-```
+---
 
-## Probar flujos importantes (manualmente)
+## Decisiones técnicas (lo que importa para la evaluación)
 
-1. Iniciar la app en un emulador o dispositivo:
+- Estado: `provider` y `ChangeNotifier` por ser sencillo y claro para este alcance académico.
+- Robustez en entrada de datos: `lib/utils/date_utils.dart` y parsers CSV tolerantes para evitar crashes por datos sucios.
+- Validaciones en providers: reglas críticas (ej.: evitar duplicidad de reservas) centralizadas en providers para consistencia.
+- Tests: `test/test_helpers.dart` y un conjunto de tests unitarios/widget que cubren flujos críticos.
 
-```powershell
-Set-Location 'C:\Users\USER\Desktop\app-de-occitours-main'
-flutter run
-```
+---
 
-2. Como administrador (o usando una cuenta con rol `admin`):
- - Abrir `Panel de Administración` → `Stock bajo (N)` para ver productos con stock bajo.
- - Crear una `Compra` desde `Compras` → `Nueva Compra`.
- - Ir a `Detalle Compra` y seleccionar `Marcar como recibido` → esto actualiza el stock y guarda un registro en el historial.
+## Qué verificar para la rúbrica (README completo: 0–5)
 
-## Notas finales
+- Instalación: comando `flutter pub get` y `flutter run` funcionan.
+- Uso: flujos claves (login, ver catálogo, reservar, carrito) ejecutables.
+- Decisiones técnicas: presencia de documentación breve sobre diseño (providers, parsers, validaciones).
 
-Si quieres que pulse la importación CSV para soportar formatos más complejos (comillas, saltos de línea) puedo integrar la dependencia `csv` y mejorar el parser.
+Este README + `README_DELIVERY.md` y `docs/` cubren esos puntos.
 
-## Documentación de Estados
-Se añadió `docs/states.md` con la descripción de cada "state" (providers), su API pública y notas para evaluación (Login, Productos, Perfil, Carrito, Programación/Reservas, Reportes).
+---
 
-Para más detalles, abre `docs/states.md`.
+## Limitaciones conocidas (resumido)
 
+- Agenda: implementación mínima (vista diaria), no calendario avanzado.
+- Pagos: integraciones reales no incluidas (simulados).
+- Recomendación: normalizar datos de origen en producción; los parsers son tolerantes pero no sustituyen validación/ETL.
+
+---
+
+## Entrega rápida
+
+1. Ejecutar `flutter analyze` y `flutter test`.
+2. Crear un tag `v1.0-delivery` y adjuntar `CHANGELOG.md` si se desea.
+3. (Opcional) Generar APK: `flutter build apk --release`.
+
+---
+## NOTA: 
+La carpeta llamda docs es la documentafcion de como se realizo el proyecto desde 0 

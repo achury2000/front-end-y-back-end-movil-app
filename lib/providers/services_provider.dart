@@ -6,6 +6,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/service.dart';
 
+/// Proveedor para servicios ofrecidos por las fincas.
+///
+/// Responsabilidades:
+/// - Gestionar la colección de `Service`, persistir en `SharedPreferences` y mantener un audit trail.
+/// - Operaciones CRUD y funciones de import/export CSV.
+///
+/// Herencia / Interfaces:
+/// - Mezcla `ChangeNotifier` para notificar cambios a la UI.
+///
+/// Call-sites típicos:
+/// - Consumido por formularios y pantallas relacionadas con la creación/edición de servicios.
 class ServicesProvider with ChangeNotifier {
   static const _prefsKey = 'services_v1';
   final List<Map<String,dynamic>> _audit = [];

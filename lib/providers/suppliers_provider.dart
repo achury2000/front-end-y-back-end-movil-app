@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Proveedor para proveedores (suppliers).
+///
+/// - Gestiona información de proveedores, persistencia y auditoría.
 class SuppliersProvider with ChangeNotifier {
   static const _prefsKey = 'suppliers_v1';
   final List<Map<String, dynamic>> _suppliers = [];

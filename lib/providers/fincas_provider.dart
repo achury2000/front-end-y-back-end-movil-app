@@ -9,6 +9,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/finca.dart';
 import '../data/mock_fincas.dart';
 
+/// Proveedor que gestiona las fincas (CRUD, búsqueda y persistencia).
+///
+/// Responsabilidades:
+/// - Mantener la lista de `Finca` en memoria y sincronizarla con `SharedPreferences`.
+/// - Proveer operaciones de creación, actualización, eliminación, búsqueda geográfica y import/export CSV.
+/// - Llevar un registro de auditoría (`_audit`) para cambios relevantes.
+///
+/// Herencia / Interfaces:
+/// - Mezcla `ChangeNotifier` para notificar cambios a la UI.
+///
+/// Call-sites típicos:
+/// - Consumido por pantallas de listado, detalle y formularios (ej. `finca_detail_screen.dart`, `fincas_map_screen.dart`).
 class FincasProvider with ChangeNotifier {
   List<Finca> _items = [];
   bool _loading = false;
@@ -157,7 +169,7 @@ class FincasProvider with ChangeNotifier {
 
   double _toRadians(double deg) => deg * (math.pi / 180);
 
-  // CSV export simple (id,code,name,location,capacity,price,lat,lng,active)
+  // Exportación CSV simple (id,code,name,location,capacity,price,lat,lng,active)
   String exportCsv() {
     final sb = StringBuffer();
     sb.writeln('id,code,name,location,capacity,pricePerNight,latitude,longitude,active');
@@ -177,7 +189,7 @@ class FincasProvider with ChangeNotifier {
     final imported = <Finca>[];
     for (final r in rows) {
       final cols = _parseCsvLine(r);
-      // Accept rows with missing optional fields; we require at least id,code,name
+      // Aceptar filas con campos opcionales faltantes; requerimos al menos id, code y name
       if (cols.length < 3) continue;
       final id = cols.length > 0 ? cols[0] : '';
       final code = cols.length > 1 ? cols[1] : '';
@@ -211,8 +223,10 @@ class FincasProvider with ChangeNotifier {
   }
 
   List<String> _parseCsvLine(String line) {
-    // Lenient CSV parser: supports quoted fields, doubled quotes and
-    // tolerates inner quotes that are not RFC-4180 compliant.
+    // Parser CSV tolerante:
+    // - Soporta campos entrecomillados y comillas escapadas como "".
+    // - Intentamos ser lenientes con formatos imperfectos (comillas interiores no exactamente RFC-4180).
+    // Uso: utilizado por `importFromCsv` para leer filas de CSV exportadas externamente.
     final result = <String>[];
     var cur = StringBuffer();
     var inQuotes = false;
@@ -220,23 +234,23 @@ class FincasProvider with ChangeNotifier {
       final ch = line[i];
       if (ch == '"') {
         if (inQuotes && i+1 < line.length && line[i+1] == '"') {
-          // escaped double-quote as ""
-          cur.write('"');
+            // comilla escapada representada como ""
+            cur.write('"');
           i++; // skip escaped quote
           continue;
         }
         if (inQuotes) {
-          // If next char is comma or end, this closes the quote
+            // Si el siguiente caracter es coma o fin de línea, esto cierra la comilla
           final next = i+1 < line.length ? line[i+1] : null;
           if (next == null || next == ',') {
             inQuotes = false;
             continue;
           }
-          // Otherwise treat the quote as literal (lenient)
+            // En caso contrario tratamos la comilla como carácter literal (modo tolerante)
           cur.write('"');
           continue;
         }
-        // opening quote
+          // apertura de comillas
         inQuotes = true;
         continue;
       }

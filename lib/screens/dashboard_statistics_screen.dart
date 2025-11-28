@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/reports_provider.dart';
 
+/// Pantalla de estadísticas detalladas.
+///
+/// Muestra gráficos de series temporales (ingresos por día) y listas top de paquetes.
+/// Consume datos desde `ReportsProvider` y expone controles de periodo.
 class DashboardStatisticsScreen extends StatefulWidget {
   static const routeName = '/dashboard/statistics';
   @override

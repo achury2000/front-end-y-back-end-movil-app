@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Pantalla de indicadores clave (KPI).
+///
+/// Muestra métricas resumidas como NPS, satisfacción y tasa de repetición.
+/// Diseñada para ser una vista ligera consumiendo datos del `ReportsProvider`.
 class DashboardIndicatorsScreen extends StatelessWidget {
   static const routeName = '/dashboard/indicators';
   @override

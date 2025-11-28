@@ -11,6 +11,12 @@ import '../providers/reservations_provider.dart';
 import '../data/mock_users.dart';
 // parte linsaith
 
+/// Pantalla principal del panel de administración.
+///
+/// Responsabilidades:
+/// - Mostrar métricas clave (usuarios, paquetes, ingresos).
+/// - Proveer acceso rápido a secciones administrativas y al calendario de reservas.
+/// - Escuchar cambios en `ReservationsProvider` para actualizar métricas en tiempo real.
 class AdminDashboardScreen extends StatefulWidget {
   static const routeName = '/admin';
   @override
@@ -43,7 +49,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _onReservationsChanged(){
-    // regenerate report and refresh revenue/stat cards, schedule after build
+    // Regenera el informe y actualiza tarjetas de ingresos/estadísticas; se programa después del build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final reservationsProv = Provider.of<ReservationsProvider>(context, listen: false);
       final reportsProv = Provider.of<ReportsProvider>(context, listen: false);
@@ -75,7 +81,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
     await reportsProv.generateReport(reservations: reservationsProv.reservations);
     _revenue = reportsProv.data['revenue'] ?? 0.0;
-    // Listen to reservations changes so dashboard updates in real time
+    // Escuchar cambios en reservas para actualizar el dashboard en tiempo real
     try{
       reservationsProv.removeListener(_onReservationsChanged);
     } catch(_){ }
@@ -140,12 +146,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ? LinearProgressIndicator()
             : Row(children:[Expanded(child: statCard('Total Usuarios', '$_totalUsers', color: Colors.green)), SizedBox(width:12), Expanded(child: statCard('Paquetes activos', '$_paquetes')), SizedBox(width:12), Expanded(child: statCard('Ingresos', 'COP ${_revenue.toStringAsFixed(0)}', color: Colors.green))]),
           SizedBox(height:16),
-          // Quick access removed from body; available via the menu (hamburguesa)
+          // Acceso rápido eliminado del cuerpo; disponible desde el menú (hamburguesa)
           SizedBox(height:12),
-          // Calendar + Dashboard area
+          // Área de calendario y panel
           Expanded(child: reportsProv.loading || reservationsProv.loading ? Center(child: CircularProgressIndicator()) : SingleChildScrollView(
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children:[
-              // Calendar card with month navigation
+              // Tarjeta de calendario con navegación por mes
               Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children:[
                   Text('Agenda del mes', style: TextStyle(fontSize:16, fontWeight: FontWeight.w700)),
@@ -162,7 +168,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ])
               ]))),
               SizedBox(height:12),
-              // Dashboard charts
+              // Gráficos del panel
               Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[
                 Text('Dashboard', style: TextStyle(fontSize:16, fontWeight: FontWeight.w700)),
                 SizedBox(height:8),
@@ -318,7 +324,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         Navigator.of(context).pushNamed('/products/lowstock');
                       },
                     ),
-                    drawerItem(Icons.file_upload, 'Import/Export Productos', '/products/csv'),
+                    drawerItem(Icons.file_upload, 'Importar/Exportar Productos', '/products/csv'),
                     drawerItem(Icons.inventory_2, 'Compras', '/purchases'),
                     drawerItem(Icons.playlist_add_check, 'Crear Compra', '/purchases/create'),
                   ],

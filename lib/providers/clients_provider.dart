@@ -4,6 +4,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/mock_clients.dart';
 
+/// Proveedor que gestiona los clientes y campañas relacionadas.
+///
+/// Responsabilidades:
+/// - Mantener la lista de clientes, campañas y un registro de auditoría en `SharedPreferences`.
+/// - Proveer operaciones CRUD, activación/desactivación, import/export CSV y búsquedas filtradas.
+///
+/// Herencia / Interfaces:
+/// - Mezcla `ChangeNotifier` para notificar cambios a la UI.
+///
+/// Call-sites típicos:
+/// - Consumido por pantallas de clientes, formularios de creación/edición y módulos de campañas.
 class ClientsProvider with ChangeNotifier {
   static const _clientsKey = 'clients';
   static const _campaignsKey = 'client_campaigns';
@@ -146,7 +157,7 @@ class ClientsProvider with ChangeNotifier {
     await _saveClients(); await _saveAudit(); notifyListeners();
   }
 
-  // Search and filters
+  // Búsqueda y filtros
   List<Map<String,dynamic>> searchClients({String? query, bool? active}){
     Iterable<Map<String,dynamic>> res = _clients;
     if (query != null && query.isNotEmpty) {
@@ -157,7 +168,7 @@ class ClientsProvider with ChangeNotifier {
     return res.toList();
   }
 
-  // CSV export/import
+  // Exportación e importación CSV
   String exportCsv(){
     final headers = ['id','name','email','phone','address','active','created'];
     final rows = [_clients.map((c) => headers.map((h) => (c[h] ?? '').toString()).join(','))];
@@ -188,7 +199,7 @@ class ClientsProvider with ChangeNotifier {
     await _saveClients(); await _saveAudit(); notifyListeners();
   }
 
-  // Campaign helpers
+  // Utilidades para campañas
   Future<String> addCampaign(Map<String, String> data) async {
     final id = 'CAM${DateTime.now().millisecondsSinceEpoch}';
     final entry = {'id': id, 'title': data['title'] ?? '', 'description': data['description'] ?? '', 'created': DateTime.now().toIso8601String()};

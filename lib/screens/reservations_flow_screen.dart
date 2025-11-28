@@ -38,7 +38,7 @@ class _ReservationsFlowScreenState extends State<ReservationsFlowScreen> {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String,dynamic>?;
     final productId = args?['id'] as String?;
     final qty = args?['qty'] as int? ?? 1;
-    // variant is optional; not needed in this flow currently
+    // la variante es opcional; no es necesaria en este flujo actualmente
     final products = Provider.of<ProductsProvider>(context, listen:false);
     final product = productId != null ? products.findById(productId) : null;
 

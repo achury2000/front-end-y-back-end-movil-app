@@ -1,6 +1,3 @@
-// parte linsaith
-// parte juanjo
-
 # Fase 7 - Itinerarios y facturación avanzada
 
 Objetivo: Permitir crear itinerarios (secuencia de rutas/fincas), gestionarlos, convertir un itinerario en reservas programadas, y preparar datos para facturación avanzada.

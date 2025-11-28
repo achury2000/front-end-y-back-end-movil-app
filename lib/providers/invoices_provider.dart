@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/invoice.dart';
 import 'payments_provider.dart';
 
+/// Proveedor para facturas (invoices).
+///
+/// - Gestiona facturas, persistencia y auditoría.
+/// - Soporta import/export CSV y marcado de estado con integración opcional a `PaymentsProvider`.
 class InvoicesProvider with ChangeNotifier {
   static const _prefsKey = 'invoices_v1';
   static const _auditKey = 'invoices_audit_v1';

@@ -12,11 +12,11 @@ class UserDetailScreen extends StatelessWidget {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final usersProv = Provider.of<UsersProvider>(context);
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    // expecting args may contain 'id'
+    // Se espera que `args` pueda contener la clave 'id'
     final id = args != null && args['id'] != null ? args['id'] as String : null;
     // parte linsaith
     if (id == null) {
-      // fallback to reading provided map fields
+      // En ausencia de `id`, mostramos una vista alternativa leyendo los campos provistos en el mapa
       return Scaffold(appBar: AppBar(title: Text('Detalle de Usuario')), body: Center(child: Text('Usuario no especificado')));
     }
     final idx = usersProv.users.indexWhere((u) => u.id == id);

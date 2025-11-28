@@ -6,6 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/itinerary.dart';
 
+/// Proveedor para gestionar itinerarios.
+///
+/// - Persiste la lista de itinerarios en `SharedPreferences` usando la clave
+///   `_prefsKey` y guarda un registro de auditoría en `_auditKey`.
+/// - Provee operaciones CRUD, import/export CSV y la creación de
+///   reservaciones a partir de un itinerario.
 class ItinerariesProvider with ChangeNotifier {
   static const _prefsKey = 'itineraries_v1';
   static const _auditKey = 'itineraries_audit_v1';
@@ -95,8 +101,9 @@ class ItinerariesProvider with ChangeNotifier {
     await _save(); notifyListeners();
   }
 
-  // Convert an itinerary into reservations using provided ReservationsProvider
-  // Returns a map with results per item: {routeId: reservationId or error}
+  // Convierte un itinerario en reservaciones usando el ReservationsProvider
+  // provisto. Retorna un mapa con resultados por elemento: {routeId: reservationId
+  // o un mapa con clave 'error' en caso de fallo}.
   Future<Map<String,dynamic>> createReservationsFromItinerary(String itineraryId, {required DateTime date, required String time, required String clientId, required dynamic reservationsProvider, Map<String,String>? actor}) async {
     final it = findById(itineraryId);
     if (it == null) throw Exception('Itinerario no encontrado');

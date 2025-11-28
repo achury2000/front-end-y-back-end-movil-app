@@ -87,7 +87,7 @@ class _ReservationsEditScreenState extends State<ReservationsEditScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Editar Reserva')),
       body: Padding(padding: EdgeInsets.all(16), child: ListView(children:[
-        // Mini calendar showing occupied days/hours in red for clients
+        // Mini calendario que muestra días/horas ocupadas en rojo para clientes
         Builder(builder: (ctx){
           final prov = Provider.of<ReservationsProvider>(ctx);
           return Card(child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[

@@ -1,6 +1,3 @@
-// parte linsaith
-// parte juanjo
-
 # Fase 8 - Facturación avanzada (completada)
 
 Resumen de lo implementado:

@@ -14,7 +14,7 @@ class ReportsProvider with ChangeNotifier {
     notifyListeners();
     await Future.delayed(Duration(milliseconds: 700));
 
-    // If reservations provided, compute metrics from them
+    // Si se pasan reservas, calcular métricas a partir de ellas
     if (reservations != null) {
       // revenue total (exclude cancelled)
       double revenue = 0.0;
@@ -94,7 +94,7 @@ class ReportsProvider with ChangeNotifier {
       return;
     }
 
-    // Fallback mocked stats for graphs when no reservations passed
+    // Datos simulados de respaldo para los gráficos cuando no se pasan reservas
     _data = {
       'sales': List.generate(7, (i) => {'day': i+1, 'value': (1000*(i+1)).toDouble()}),
       'topProducts': [

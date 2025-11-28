@@ -126,7 +126,3 @@ Notas:
 
 ## Cómo extender y pruebas
 - Para añadir validaciones adicionales (por ejemplo: bloqueo de eliminación de ruta si está en programación activa), ampliar los providers relevantes (`RoutesProvider`, `ReservationsProvider`) y añadir tests unitarios en `test/unit/`.
-
----
-
-Si quieres, puedo generar un diagrama rápido (README) mostrando la interacción entre providers y pantallas, y añadir ejemplos de llamadas para cada provider.

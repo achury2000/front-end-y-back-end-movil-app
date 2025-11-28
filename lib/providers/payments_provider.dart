@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/payment.dart';
 
+/// Proveedor para pagos.
+///
+/// - Administra pagos registrados, persistencia y un log de auditoría.
 class PaymentsProvider with ChangeNotifier {
   static const _prefsKey = 'payments_v1';
   static const _auditKey = 'payments_audit_v1';

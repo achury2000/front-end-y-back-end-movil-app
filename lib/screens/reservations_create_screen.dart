@@ -9,6 +9,14 @@ import '../providers/services_provider.dart';
 import '../providers/fincas_provider.dart';
 import 'package:flutter/services.dart';
 
+/// Pantalla/Formulario para crear una reserva.
+///
+/// Responsabilidades:
+/// - Recolectar datos (finca, servicio, cliente, fecha/hora, número de personas y notas) y validar disponibilidad.
+/// - Al confirmar, crea la reserva via `ReservationsProvider.addReservation` y muestra confirmación/copiado.
+///
+/// Herencia / Overrides:
+/// - `StatefulWidget` con lógica en `_ReservationsCreateScreenState`, usa pickers de fecha y hora y valida solapamientos.
 class ReservationsCreateScreen extends StatefulWidget {
   static const routeName = '/reservations/create';
   @override
@@ -190,7 +198,7 @@ class _ReservationsCreateScreenState extends State<ReservationsCreateScreen> {
             SizedBox(height:12),
             TextFormField(controller: _notesCtrl, maxLines:3, decoration: InputDecoration(labelText: 'Notas / Requerimientos')),
             SizedBox(height:12),
-            // Availability placeholder
+            // Marcador de disponibilidad
             Row(children:[Icon(Icons.check_circle, color: Colors.green), SizedBox(width:8), Expanded(child: Text('Disponibilidad: Disponible (actualizado en tiempo real)'))]),
             SizedBox(height:14),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _confirm, child: Text('Confirmar')))

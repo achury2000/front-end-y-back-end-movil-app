@@ -84,7 +84,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                           items: ['Cliente','Guía','Administrador'].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                           onChanged: (sel) async {
                               if (sel == null) return;
-                              // map back to internal role values
+                              // mapear de vuelta a los valores internos de rol
                               final mapped = _inverseMapRole(sel);
                               await Provider.of<UsersProvider>(context, listen: false).updateRole(u.id, mapped);
                               try {

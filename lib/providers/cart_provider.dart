@@ -5,6 +5,11 @@ import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../data/mock_products.dart';
 
+/// Proveedor que gestiona el carrito de compras.
+///
+/// - Añade, elimina y actualiza cantidades de productos en el carrito.
+/// - Soporta variantes opcionales por producto y un sistema simple de cupones.
+/// - Persiste el estado en `SharedPreferences` bajo la clave `cart`.
 class CartProvider with ChangeNotifier {
   final List<CartItem> _items = [];
 
@@ -14,6 +19,7 @@ class CartProvider with ChangeNotifier {
 
   List<CartItem> get items => List.unmodifiable(_items);
 
+  // Agrega un producto al carrito. `variant` es opcional y distingue variantes del mismo producto.
   void addProduct(Product p, {int qty = 1, String? variant}){
     final idx = _items.indexWhere((c) => c.product.id == p.id && c.selectedVariant == variant);
     if(idx>=0){
@@ -102,12 +108,12 @@ class CartProvider with ChangeNotifier {
             final prod = mockProducts.firstWhere((p) => p.id == id);
             _items.add(CartItem(product: prod, quantity: qty, selectedVariant: variant));
           } catch (_) {
-            // product not found in mocks, skip
+              // producto no encontrado en los datos mock, omitir
           }
       }
       notifyListeners();
     } catch (e) {
-      // ignore parse errors
+        // ignorar errores de parseo
     }
   }
 }

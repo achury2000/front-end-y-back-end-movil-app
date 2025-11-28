@@ -4,6 +4,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/review.dart';
 
+/// Proveedor para opiniones/reseñas (reviews).
+///
+/// Responsabilidades:
+/// - Almacenar y recuperar `Review` desde `SharedPreferences`.
+/// - Proveer operaciones CRUD y búsqueda filtrada por objetivo o puntuación.
+///
+/// Herencia / Interfaces:
+/// - Mezcla `ChangeNotifier` para notificar a la UI cuando cambian las reseñas.
+///
+/// Call-sites típicos:
+/// - Utilizado por pantallas que muestran o permiten añadir reseñas para fincas, rutas o servicios.
 class ReviewsProvider with ChangeNotifier {
   static const _prefsKey = 'reviews_v1';
   List<Review> _items = [];

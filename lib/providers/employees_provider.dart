@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/mock_employees.dart';
 
+/// Proveedor para gestión de empleados.
+///
+/// - Carga y persiste una lista simple de empleados en `SharedPreferences`.
+/// - Provee operaciones básicas CRUD y notificaciones a la UI.
 class EmployeesProvider with ChangeNotifier {
   static const _prefsKey = 'employees';
 
