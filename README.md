@@ -94,18 +94,9 @@ Un guion más detallado y checklist están en `README_DELIVERY.md`.
 
 ---
 
-## Ejecutar tests
+## Tests (pospuestos)
 
-```powershell
-Set-Location 'C:\Users\USER\Desktop\app-de-occitours-main'
-flutter pub get
-flutter analyze
-flutter test
-```
-
-Consejos:
-- Usa `initTestEnvironment()` de `test/test_helpers.dart` en widget tests para mockear `SharedPreferences` y requests fuera de la app.
-- Para pruebas rápidas, corre tests unitarios específicos: `flutter test test/unit/services_provider_test.dart`.
+Nota: los tests se han pospuesto en esta entrega. Si quieres que los restaure y los ejecute localmente, dímelo y los volveré a añadir y ejecutar.
 
 ---
 
