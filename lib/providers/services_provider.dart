@@ -3,7 +3,8 @@
 // parte juanjo
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../models/service.dart';
 
 /// Proveedor para servicios ofrecidos por las fincas.
@@ -33,7 +34,7 @@ class ServicesProvider with ChangeNotifier {
 
   Future<void> _load() async {
     _loading = true; notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw == null) {
       _services = [];
@@ -48,8 +49,13 @@ class ServicesProvider with ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_services.map((s)=> s.toMap()).toList()));
+    final encoded = await compute(encodeToJson, _services.map((s)=> s.toMap()).toList());
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString(_prefsKey, encoded);
+      } catch (_) {}
+    });
   }
 
   Future<String> addService(Map<String,dynamic> data) async {
@@ -57,7 +63,8 @@ class ServicesProvider with ChangeNotifier {
     final entry = Service.fromMap({...data, 'id': id});
     _services.insert(0, entry);
     _audit.insert(0, {'action':'create_service','serviceId': id, 'data': entry.toMap(), 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _save().catchError((_){});
+    notifyListeners();
     return id;
   }
 
@@ -68,7 +75,8 @@ class ServicesProvider with ChangeNotifier {
     final merged = {...prev, ...data};
     _services[idx] = Service.fromMap(merged);
     _audit.insert(0, {'action':'update_service','serviceId': id, 'previous': prev, 'new': _services[idx].toMap(), 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _save().catchError((_){});
+    notifyListeners();
   }
 
   Future<void> deleteService(String id) async {
@@ -76,7 +84,8 @@ class ServicesProvider with ChangeNotifier {
     if (idx < 0) return;
     final removed = _services.removeAt(idx);
     _audit.insert(0, {'action':'delete_service','serviceId': id, 'data': removed.toMap(), 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _save().catchError((_){});
+    notifyListeners();
   }
 
   Service? getById(String id) {
@@ -114,7 +123,8 @@ class ServicesProvider with ChangeNotifier {
     if (replace) _services = entries;
     else _services.insertAll(0, entries);
     _audit.insert(0, {'action':'import_services','count': entries.length, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _save().catchError((_){});
+    notifyListeners();
   }
 
   List<Map<String,dynamic>> get audit => List.unmodifiable(_audit);

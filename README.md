@@ -1,3 +1,43 @@
+## Development
+
+Explain how to run the app here.
+
+Quick start (DB + API config)
+
+- Levantar base de datos local con Docker (usa la carpeta `db/`):
+
+```powershell
+cd 'c:\Users\USER\Desktop\app-de-occitours-main\db'
+docker compose up -d
+```
+
+- O crear DB e importar el schema con el script PowerShell (requiere `psql`):
+
+```powershell
+cd 'c:\Users\USER\Desktop\app-de-occitours-main\db'
+.\create_db.ps1
+```
+
+- Configurar la URL del backend (API_BASE_URL):
+
+	- Edita `.env` en la raíz del proyecto (puedes copiar `.env.example`) y cambia `API_BASE_URL`.
+	- Ejemplo de `.env`:
+
+```dotenv
+API_BASE_URL=https://api.example.com
+```
+
+- Correr la app (desde la raíz del proyecto):
+
+```powershell
+flutter pub get
+flutter run
+```
+
+Colección Postman
+
+He incluido `docs/postman_collection_occitours.json` con un stub de los endpoints principales para que puedas importarla en Postman y probar la API.
+
 # Occitours — Guía de entrega (versión para evaluación)
 
 Breve: app Flutter de demostración para catálogos, servicios y reservas. Este README cubre lo que el profesor necesita: instalación, uso, pruebas y decisiones técnicas.

@@ -1,8 +1,10 @@
 // parte linsaith
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../data/mock_roles.dart';
 
 /// Proveedor para roles y permisos del sistema.
@@ -21,7 +23,7 @@ class RolesProvider with ChangeNotifier {
   }
 
   Future<void> loadRoles() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw == null) {
       _roles = List<Map<String,dynamic>>.from(mockRoles);
@@ -47,13 +49,15 @@ class RolesProvider with ChangeNotifier {
   }
 
   Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_roles));
+    final prefs = Prefs.instance;
+    final encoded = await compute(encodeToJson, _roles);
+    await prefs.setString(_prefsKey, encoded).catchError((_) => false);
   }
 
   Future<void> _saveAuditToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('roles_audit', jsonEncode(_audit));
+    final prefs = Prefs.instance;
+    final encoded = await compute(encodeToJson, _audit);
+    await prefs.setString('roles_audit', encoded).catchError((_) => false);
   }
 
   Future<void> addRole(Map<String, dynamic> role) async {

@@ -1,8 +1,10 @@
 // parte linsaith
 // parte juanjo
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/json_helpers.dart';
+import '../utils/prefs.dart';
 import '../models/payment.dart';
 
 /// Proveedor para pagos.
@@ -14,6 +16,8 @@ class PaymentsProvider with ChangeNotifier {
   List<Payment> _items = [];
   final List<Map<String,dynamic>> _audit = [];
   bool _loading = true;
+  Timer? _saveTimer;
+  static const Duration _saveDebounce = Duration(milliseconds: 600);
 
   PaymentsProvider(){ _load(); }
 
@@ -23,7 +27,7 @@ class PaymentsProvider with ChangeNotifier {
 
   Future<void> _load() async {
     _loading = true; notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw != null && raw.isNotEmpty) {
       try { _items = Payment.decodeList(raw); } catch (_) { _items = []; }
@@ -39,16 +43,18 @@ class PaymentsProvider with ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, Payment.encodeList(_items));
-    await prefs.setString(_auditKey, jsonEncode(_audit));
+    final prefs = Prefs.instance;
+    final encItems = await compute(encodeToJson, _items.map((e) => e.toMap()).toList());
+    await prefs.setString(_prefsKey, encItems).catchError((_) => false);
+    final encAudit = await compute(encodeToJson, _audit);
+    await prefs.setString(_auditKey, encAudit).catchError((_) => false);
   }
 
   Future<void> addPayment(Payment p, {Map<String,String>? actor}) async {
     if (p.amount <= 0) throw Exception('El monto debe ser mayor a 0');
     _items.insert(0, p);
     _audit.insert(0, {'action':'create_payment','id': p.id, 'data': p.toMap(), 'actor': actor, 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _scheduleSave(); notifyListeners();
   }
 
   Future<void> updatePayment(String id, Map<String,dynamic> changes, {Map<String,String>? actor}) async {
@@ -58,7 +64,7 @@ class PaymentsProvider with ChangeNotifier {
     final merged = {...before, ...changes};
     _items[idx] = Payment.fromMap(merged);
     _audit.insert(0, {'action':'update_payment','id': id, 'before': before, 'after': _items[idx].toMap(), 'actor': actor, 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _scheduleSave(); notifyListeners();
   }
 
   Future<void> deletePayment(String id, {Map<String,String>? actor}) async {
@@ -66,7 +72,7 @@ class PaymentsProvider with ChangeNotifier {
     if (idx == -1) return;
     final removed = _items.removeAt(idx);
     _audit.insert(0, {'action':'delete_payment','id': id, 'data': removed.toMap(), 'actor': actor, 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _scheduleSave(); notifyListeners();
   }
 
   Payment? findById(String id){ try { return _items.firstWhere((e)=> e.id == id);} catch(_) { return null; } }
@@ -91,7 +97,24 @@ class PaymentsProvider with ChangeNotifier {
     }
     if (replace) _items = entries; else _items.insertAll(0, entries);
     _audit.insert(0, {'action':'import_payments','count': entries.length, 'actor': actor, 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); notifyListeners();
+    _scheduleSave(); notifyListeners();
+  }
+
+  void _scheduleSave(){
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_saveDebounce, () async {
+      try {
+        await _save();
+      } catch (e) {
+        // ignore
+      }
+    });
+  }
+
+  @override
+  void dispose(){
+    _saveTimer?.cancel();
+    super.dispose();
   }
 }
 

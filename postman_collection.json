@@ -1,0 +1,53 @@
+{
+  "info": {
+    "name": "Occitours API - Stub",
+    "_postman_id": "occitours-stub",
+    "description": "Colección stub con los endpoints principales usados por la app (auth, products, cart, orders, reservations, users, reviews)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        { "name": "Login", "request": { "method": "POST", "header": [], "body": { "mode": "raw", "raw": "{ \"email\": \"user@example.com\", \"password\": \"pass\" }" }, "url": { "raw": "{{API_BASE_URL}}/auth/login", "host": ["{{API_BASE_URL}}"], "path": ["auth","login"] } } },
+        { "name": "Register", "request": { "method": "POST", "header": [], "body": { "mode": "raw", "raw": "{ \"name\": \"User\", \"email\": \"user@example.com\", \"password\": \"pass\" }" }, "url": { "raw": "{{API_BASE_URL}}/auth/register", "host": ["{{API_BASE_URL}}"], "path": ["auth","register"] } } },
+        { "name": "Refresh", "request": { "method": "POST", "header": [], "body": { "mode": "raw", "raw": "{ \"refresh_token\": \"<refresh>\" }" }, "url": { "raw": "{{API_BASE_URL}}/auth/refresh", "host": ["{{API_BASE_URL}}"], "path": ["auth","refresh"] } } }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        { "name": "List Products", "request": { "method": "GET", "url": { "raw": "{{API_BASE_URL}}/products", "host": ["{{API_BASE_URL}}"], "path": ["products"] } } },
+        { "name": "Get Product", "request": { "method": "GET", "url": { "raw": "{{API_BASE_URL}}/products/:id", "host": ["{{API_BASE_URL}}"], "path": ["products",":id"] } } }
+      ]
+    },
+    {
+      "name": "Cart/Orders",
+      "item": [
+        { "name": "Get Cart", "request": { "method": "GET", "url": { "raw": "{{API_BASE_URL}}/cart", "host": ["{{API_BASE_URL}}"], "path": ["cart"] } } },
+        { "name": "Add to Cart", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{ \"productId\": \"<id>\", \"quantity\": 1 }" }, "url": { "raw": "{{API_BASE_URL}}/cart", "host": ["{{API_BASE_URL}}"], "path": ["cart"] } } },
+        { "name": "Create Order", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{ \"cartId\": \"<cart>\", \"paymentMethod\": \"card\" }" }, "url": { "raw": "{{API_BASE_URL}}/orders", "host": ["{{API_BASE_URL}}"], "path": ["orders"] } } }
+      ]
+    },
+    {
+      "name": "Reservations",
+      "item": [
+        { "name": "List Reservations", "request": { "method": "GET", "url": { "raw": "{{API_BASE_URL}}/reservations", "host": ["{{API_BASE_URL}}"], "path": ["reservations"] } } },
+        { "name": "Create Reservation", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{ \"serviceId\": \"<id>\", \"date\": \"2025-12-10\" }" }, "url": { "raw": "{{API_BASE_URL}}/reservations", "host": ["{{API_BASE_URL}}"], "path": ["reservations"] } } }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        { "name": "Get Profile", "request": { "method": "GET", "url": { "raw": "{{API_BASE_URL}}/users/me", "host": ["{{API_BASE_URL}}"], "path": ["users","me"] } } }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        { "name": "List Reviews", "request": { "method": "GET", "url": { "raw": "{{API_BASE_URL}}/reviews", "host": ["{{API_BASE_URL}}"], "path": ["reviews"] } } },
+        { "name": "Create Review", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{ \"productId\": \"<id>\", \"score\": 5, \"comment\": \"Genial\" }" }, "url": { "raw": "{{API_BASE_URL}}/reviews", "host": ["{{API_BASE_URL}}"], "path": ["reviews"] } } }
+      ]
+    }
+  ]
+}

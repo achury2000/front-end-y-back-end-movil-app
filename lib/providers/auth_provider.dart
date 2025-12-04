@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../services/auth_service.dart';
 import '../models/user.dart';
 import '../data/mock_users.dart';
 
@@ -24,15 +25,29 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      // simulate API
-      await Future.delayed(Duration(seconds: 1));
-      final found = mockUsers.firstWhere((u) => u.email == email, orElse: () => throw 'User not found');
-      _user = found;
-      _token = 'mock-token-${found.id}';
-      // persist token
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', _token!);
-      await prefs.setString('userId', found.id);
+      // Try real API login first
+      try {
+        final result = await AuthService.instance.login(email, password);
+        final user = result['user'];
+        final access = result['access_token'] as String?;
+        if (access != null) _token = access;
+        if (user is Map<String, dynamic>) {
+          _user = User.fromJson(user);
+        }
+        // persist lightweight info in Prefs for compatibility with existing code
+        final prefs = Prefs.instance;
+        if (_token != null) await prefs.setString('token', _token!);
+        if (_user != null) await prefs.setString('userId', _user!.id);
+      } catch (apiErr) {
+        // fallback to local mock if API is not available
+        await Future.delayed(Duration(seconds: 1));
+        final found = mockUsers.firstWhere((u) => u.email == email, orElse: () => throw 'User not found');
+        _user = found;
+        _token = 'mock-token-${found.id}';
+        final prefs = Prefs.instance;
+        await prefs.setString('token', _token!);
+        await prefs.setString('userId', found.id);
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -44,9 +59,10 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _user = null;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     await prefs.remove('token');
     await prefs.remove('userId');
+    await AuthService.instance.logout();
     notifyListeners();
   }
 
@@ -54,7 +70,7 @@ class AuthProvider with ChangeNotifier {
     _loading = true;
     notifyListeners();
     await Future.delayed(Duration(milliseconds: 600));
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final storedToken = prefs.getString('token');
     final userId = prefs.getString('userId');
     if (storedToken != null && userId != null) {
@@ -73,7 +89,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final storedToken = prefs.getString('token');
     final userId = prefs.getString('userId');
     if (storedToken != null && userId != null) {

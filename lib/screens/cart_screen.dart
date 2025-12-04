@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/purchases_provider.dart';
+import '../providers/auth_provider.dart';
 
 class CartScreen extends StatelessWidget {
   static const routeName = '/cart';
@@ -35,7 +37,29 @@ class CartScreen extends StatelessWidget {
             Text('Envío: COP ${cart.shipping.toStringAsFixed(0)}'),
             Text('Total: COP ${cart.total.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
-            ElevatedButton(onPressed: cart.items.isEmpty?null:()=>showDialog(context: context, builder: (_)=>AlertDialog(title: Text('Checkout'),content: Text('Simulación de checkout completada.'),actions: [TextButton(onPressed: ()=>Navigator.of(context).pop(), child: Text('Ok'))])), child: Text('Pagar'))
+            ElevatedButton(
+              onPressed: cart.items.isEmpty
+                  ? null
+                  : () async {
+                      final auth = Provider.of<AuthProvider>(context, listen: false);
+                      if (!auth.isAuthenticated) {
+                        final go = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text('Inicio de sesión requerido'),
+                            content: Text('Debes iniciar sesión para completar la compra.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text('Cancelar')),
+                              TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Ir a inicio')),
+                            ],
+                          ),
+                        );
+                        if (go == true) Navigator.of(context).pushNamed('/login');
+                        return;
+                      }
+                      Navigator.of(context).pushNamed('/checkout');
+                    },
+              child: Text('Pagar'))
           ],
         ),
       ),

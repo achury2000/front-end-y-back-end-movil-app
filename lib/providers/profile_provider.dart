@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
 import '../models/user.dart';
 import '../data/mock_users.dart';
 
@@ -17,7 +17,7 @@ class ProfileProvider with ChangeNotifier {
     await Future.delayed(Duration(milliseconds: 600));
     _user = mockUsers.firstWhere((u)=>u.id==userId, orElse: ()=>mockUsers.first);
     // intentar cargar ediciones de perfil persistidas
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final key = 'profile_${_user!.id}';
     if (prefs.containsKey(key)){
       try {
@@ -42,9 +42,10 @@ class ProfileProvider with ChangeNotifier {
     await Future.delayed(Duration(milliseconds: 400));
     _user = updated;
     // persist small profile changes locally
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final key = 'profile_${_user!.id}';
-    await prefs.setString(key, '${_user!.name}|${_user!.phone ?? ''}|${_user!.address ?? ''}');
+    // persist in background to avoid blocking UI thread
+    prefs.setString(key, '${_user!.name}|${_user!.phone ?? ''}|${_user!.address ?? ''}').catchError((_) => false);
     _loading = false;
     notifyListeners();
   }

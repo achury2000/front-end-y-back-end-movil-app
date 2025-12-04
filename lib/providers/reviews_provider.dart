@@ -1,8 +1,11 @@
 // parte linsaith
 // parte juanjo
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/review.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
+import '../services/reviews_service.dart';
 
 /// Proveedor para opiniones/reseñas (reviews).
 ///
@@ -27,23 +30,49 @@ class ReviewsProvider with ChangeNotifier {
 
   Future<void> _load() async {
     _loading = true; notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
-    if (raw != null && raw.isNotEmpty) {
-      try { _items = Review.decodeList(raw); } catch(_) { _items = []; }
-    } else {
-      _items = [];
-      await _save();
+    final prefs = Prefs.instance;
+    try {
+      final api = await ReviewsService.instance.list();
+      if (api.isNotEmpty) {
+        _items = api;
+        await _save();
+      } else {
+        final raw = prefs.getString(_prefsKey);
+        if (raw != null && raw.isNotEmpty) {
+          try { _items = Review.decodeList(raw); } catch(_) { _items = []; }
+        } else {
+          _items = [];
+          await _save();
+        }
+      }
+    } catch (_) {
+      final raw = prefs.getString(_prefsKey);
+      if (raw != null && raw.isNotEmpty) {
+        try { _items = Review.decodeList(raw); } catch(_) { _items = []; }
+      } else {
+        _items = [];
+        await _save();
+      }
     }
     _loading = false; notifyListeners();
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, Review.encodeList(_items));
+    final prefs = Prefs.instance;
+    final encoded = await compute(encodeToJson, _items.map((e)=> e.toMap()).toList());
+    await prefs.setString(_prefsKey, encoded).catchError((_) => false);
   }
 
   Future<String> addReview(Review r) async {
+    try {
+      final id = await ReviewsService.instance.create(r.toMap());
+      if (id != null) {
+        final created = Review.fromMap({...r.toMap(), 'id': id});
+        _items.insert(0, created);
+        await _save(); notifyListeners();
+        return created.id;
+      }
+    } catch (_) {}
     _items.insert(0, r);
     await _save(); notifyListeners();
     return r.id;

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'theme/app_theme.dart'; 
+import 'utils/prefs.dart';
 import 'providers/auth_provider.dart';
 import 'providers/products_provider.dart';
 import 'providers/cart_provider.dart';
@@ -11,6 +13,7 @@ import 'providers/roles_provider.dart';
 import 'providers/users_provider.dart';
 import 'providers/reservations_provider.dart';
 import 'providers/clients_provider.dart';
+import 'providers/favorites_provider.dart';
 import 'providers/suppliers_provider.dart';
 import 'providers/purchases_provider.dart';
 import 'providers/services_provider.dart';
@@ -36,6 +39,9 @@ import 'screens/employees_list_screen.dart';
 import 'screens/employee_detail_screen.dart';
 import 'screens/employee_form_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/search_screen.dart';
+import 'screens/favorites_screen.dart';
+import 'screens/messages_screen.dart';
 import 'screens/products_screen.dart';
 import 'screens/services_list_screen.dart';
 // service_form_screen.dart is obsolete for services; using ServiceDetailScreen
@@ -60,6 +66,15 @@ import 'screens/invoice_create_screen.dart';
 import 'screens/invoice_detail_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/account_settings_screen.dart';
+import 'screens/help_screen.dart';
+import 'screens/view_profile_screen.dart';
+import 'screens/privacy_screen.dart';
+import 'screens/recommend_host_screen.dart';
+import 'screens/find_cohost_screen.dart';
+import 'screens/legal_screen.dart';
+import 'screens/trips_history_screen.dart';
+import 'screens/connections_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/reviews_list_screen.dart';
 import 'screens/review_create_screen.dart';
@@ -93,6 +108,8 @@ import 'screens/supplier_detail_screen.dart';
 import 'screens/purchases_list_screen.dart';
 import 'screens/purchase_create_screen.dart';
 import 'screens/purchase_detail_screen.dart';
+import 'screens/checkout_screen.dart';
+import 'screens/checkout_success_screen.dart';
 import 'screens/sales_list_client_screen.dart';
 import 'screens/sale_detail_screen.dart';
 import 'screens/sale_form_screen.dart';
@@ -101,8 +118,20 @@ import 'screens/products_csv_screen.dart';
 import 'screens/service_detail_screen.dart';
 import 'screens/services_agenda_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load environment (.env) before initializing other services
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // ignore if no .env found — api_config.dart falls back to placeholder
+  }
+  // Preload SharedPreferences to avoid first-use latency during critical flows
+  try {
+    await Prefs.init();
+  } catch (_) {
+    // If prefs fail to init, allow app to continue; providers will still call getInstance
+  }
   runApp(OccitoursApp());
 }
 
@@ -115,6 +144,7 @@ class OccitoursApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductsProvider()),
+          ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => FincasProvider()),
         ChangeNotifierProvider(create: (_) => RoutesProvider()),
         ChangeNotifierProvider(create: (_) => ItinerariesProvider()),
@@ -140,6 +170,9 @@ class OccitoursApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (ctx) => HomeScreen(),
+          '/search': (ctx) => SearchScreen(),
+          '/favorites': (ctx) => FavoritesScreen(),
+          '/messages': (ctx) => MessagesScreen(),
           RoutesScreen.routeName: (ctx) => RoutesScreen(),
           FincasScreen.routeName: (ctx) => FincasScreen(),
           FincasManageScreen.routeName: (ctx) => FincasManageScreen(),
@@ -226,7 +259,18 @@ class OccitoursApp extends StatelessWidget {
           LowStockScreen.routeName: guarded(['admin'], LowStockScreen()),
           ProductsCsvScreen.routeName: guarded(['admin'], ProductsCsvScreen()),
           CartScreen.routeName: (ctx) => CartScreen(),
+          CheckoutScreen.routeName: (ctx) => CheckoutScreen(),
+          CheckoutSuccessScreen.routeName: (ctx) => CheckoutSuccessScreen(),
           ProfileScreen.routeName: (ctx) => ProfileScreen(),
+          AccountSettingsScreen.routeName: (ctx) => AccountSettingsScreen(),
+          HelpScreen.routeName: (ctx) => HelpScreen(),
+          ViewProfileScreen.routeName: (ctx) => ViewProfileScreen(),
+          PrivacyScreen.routeName: (ctx) => PrivacyScreen(),
+          RecommendHostScreen.routeName: (ctx) => RecommendHostScreen(),
+          FindCohostScreen.routeName: (ctx) => FindCohostScreen(),
+          LegalScreen.routeName: (ctx) => LegalScreen(),
+          TripsHistoryScreen.routeName: (ctx) => TripsHistoryScreen(),
+          ConnectionsScreen.routeName: (ctx) => ConnectionsScreen(),
           ReportsScreen.routeName: (ctx) => ReportsScreen(),
           ReviewsListScreen.routeName: (ctx) => ReviewsListScreen(),
           '/reviews/create': guarded(['cliente','client'], ReviewCreateScreen()),

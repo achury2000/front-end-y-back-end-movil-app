@@ -5,6 +5,7 @@ import '../data/mock_products.dart' as mock_data;
 import 'product_detail_screen.dart';
 import 'routes_screen.dart';
 import 'fincas_screen.dart';
+import 'profile_screen.dart';
 // imports intentionally minimal for this screen
 import 'login_screen.dart';
 
@@ -14,25 +15,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _assetBgAvailable = false;
   @override
   void initState(){
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final products = Provider.of<ProductsProvider>(context, listen: false);
       products.loadInitial();
-      // Try to precache a local asset but do it non-blocking and with timeout
-      // so a slow network or missing asset doesn't freeze the UI.
-      final assetImage = AssetImage('assets/images/occitours_bg.jpg');
-      final precacheFuture = precacheImage(assetImage, context);
-      // Use a timeout to avoid long waits; if it completes quickly mark available
-      precacheFuture
-          .timeout(const Duration(seconds: 2))
-          .then((_) {
-        if (mounted) setState(() => _assetBgAvailable = true);
-      }).catchError((_) {
-        if (mounted) setState(() => _assetBgAvailable = false);
-      });
+      // Note: avoid attempting to precache a possibly-missing local asset to
+      // prevent repeated asset-load exceptions in the logs. We will always use
+      // the remote image as a safe fallback.
     });
   }
 
@@ -61,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: _assetBgAvailable ? AssetImage('assets/images/occitours_bg.jpg') as ImageProvider : NetworkImage(bgImage),
+                image: NetworkImage(bgImage),
                 fit: BoxFit.cover,
               ),
             ),
@@ -251,6 +242,37 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           )
         ],
+      ),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.white,
+        elevation: 8,
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: Icon(Icons.search_outlined, color: Theme.of(context).primaryColor),
+                onPressed: () => Navigator.of(context).pushNamed('/search'),
+                tooltip: 'Buscar',
+              ),
+              IconButton(
+                icon: Icon(Icons.favorite_border, color: Theme.of(context).primaryColor),
+                onPressed: () => Navigator.of(context).pushNamed('/favorites'),
+                tooltip: 'Favoritos',
+              ),
+              IconButton(
+                icon: Icon(Icons.message_outlined, color: Theme.of(context).primaryColor),
+                onPressed: () => Navigator.of(context).pushNamed('/messages'),
+                tooltip: 'Mensajes',
+              ),
+              IconButton(
+                icon: Icon(Icons.person_outline, color: Theme.of(context).primaryColor),
+                onPressed: () => Navigator.of(context).pushNamed(ProfileScreen.routeName),
+                tooltip: 'Perfil',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../data/mock_products.dart';
+import '../services/cart_service.dart';
 
 /// Proveedor que gestiona el carrito de compras.
 ///
@@ -88,15 +89,42 @@ class CartProvider with ChangeNotifier {
   }
 
   Future<void> _saveCart() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final data = _items.map((c)=>{'id': c.product.id, 'qty': c.quantity, 'variant': c.selectedVariant}).toList();
-    await prefs.setString('cart', jsonEncode(data));
+    // Try to sync with API, fallback to prefs
+    try {
+      await CartService.instance.clear();
+      for (final item in data) {
+        await CartService.instance.addToCart({'productId': item['id'], 'quantity': item['qty'], 'variant': item['variant']});
+      }
+    } catch (_) {
+      await prefs.setString('cart', jsonEncode(data));
+    }
   }
 
   Future<void> _loadCart() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString('cart');
-    if(raw==null) return;
+    if(raw==null) {
+      // try load from API
+      try {
+        final items = await CartService.instance.getCart();
+        _items.clear();
+        for (final e in items) {
+          final id = e['productId']?.toString() ?? '';
+          final qty = (e['quantity'] is int) ? e['quantity'] as int : int.tryParse('${e['quantity']}') ?? 0;
+          final variant = e['variant'] as String?;
+          try {
+            final prod = mockProducts.firstWhere((p) => p.id == id);
+            _items.add(CartItem(product: prod, quantity: qty, selectedVariant: variant));
+          } catch (_) {}
+        }
+        notifyListeners();
+        return;
+      } catch (_) {
+        return;
+      }
+    }
     try {
       final List decoded = jsonDecode(raw) as List;
       _items.clear();

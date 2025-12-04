@@ -1,7 +1,8 @@
 // parte linsaith
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 
 /// Proveedor para proveedores (suppliers).
 ///
@@ -17,7 +18,7 @@ class SuppliersProvider with ChangeNotifier {
   SuppliersProvider() { _load(); }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw != null) {
       try {
@@ -38,13 +39,23 @@ class SuppliersProvider with ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_suppliers));
+    final encoded = await compute(encodeToJson, _suppliers);
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString(_prefsKey, encoded);
+      } catch (_) {}
+    });
   }
 
   Future<void> _saveAudit() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('suppliers_audit', jsonEncode(_audit));
+    final encoded = await compute(encodeToJson, _audit);
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString('suppliers_audit', encoded);
+      } catch (_) {}
+    });
   }
 
   Map<String,dynamic>? getById(String id) {
@@ -64,8 +75,8 @@ class SuppliersProvider with ChangeNotifier {
     entry['id'] = id;
     _suppliers.insert(0, entry);
     _audit.insert(0, {'action': 'create_supplier', 'supplierId': id, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String(), 'data': entry});
-    await _save();
-    await _saveAudit();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
     notifyListeners();
     return id;
   }
@@ -76,8 +87,8 @@ class SuppliersProvider with ChangeNotifier {
     final prev = Map<String,dynamic>.from(_suppliers[idx]);
     _suppliers[idx].addAll(changes);
     _audit.insert(0, {'action':'update_supplier','supplierId': id, 'previous': prev, 'new': Map<String,dynamic>.from(_suppliers[idx]), 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String()});
-    await _save();
-    await _saveAudit();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
     notifyListeners();
   }
 
@@ -86,8 +97,8 @@ class SuppliersProvider with ChangeNotifier {
     if (idx < 0) return;
     final removed = _suppliers.removeAt(idx);
     _audit.insert(0, {'action':'delete_supplier','supplierId': id, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String(), 'data': removed});
-    await _save();
-    await _saveAudit();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
     notifyListeners();
   }
 }

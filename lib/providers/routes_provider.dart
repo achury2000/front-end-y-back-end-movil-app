@@ -3,7 +3,8 @@
 // parte juanjo
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../models/route.dart';
 
 /// Proveedor para rutas/itinerarios.
@@ -27,7 +28,7 @@ class RoutesProvider with ChangeNotifier {
 
   Future<void> _ensureLoaded() async {
     if (_items.isNotEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -39,8 +40,9 @@ class RoutesProvider with ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, RouteModel.encodeList(_items));
+    final prefs = Prefs.instance;
+    final encoded = await compute(encodeToJson, _items.map((e)=> e.toJson()).toList());
+    await prefs.setString(_prefsKey, encoded).catchError((_) => false);
   }
 
   Future<void> loadAll() async {

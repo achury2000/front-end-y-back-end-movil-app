@@ -3,7 +3,8 @@
 // parte juanjo
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/json_helpers.dart';
+import '../utils/prefs.dart';
 import '../models/itinerary.dart';
 
 /// Proveedor para gestionar itinerarios.
@@ -27,7 +28,7 @@ class ItinerariesProvider with ChangeNotifier {
 
   Future<void> _load() async {
     _loading = true; notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw != null && raw.isNotEmpty) {
       try { _items = Itinerary.decodeList(raw); } catch(_) { _items = []; }
@@ -40,9 +41,11 @@ class ItinerariesProvider with ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, Itinerary.encodeList(_items));
-    await prefs.setString(_auditKey, jsonEncode(_audit));
+    final prefs = Prefs.instance;
+    final encItems = await compute(encodeToJson, _items.map((e)=> e.toMap()).toList());
+    await prefs.setString(_prefsKey, encItems).catchError((_) => false);
+    final encAudit = await compute(encodeToJson, _audit);
+    await prefs.setString(_auditKey, encAudit).catchError((_) => false);
   }
 
   Future<String> addItinerary(Itinerary it, {Map<String,String>? actor}) async {

@@ -3,8 +3,12 @@
 // parte isa
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+import '../providers/favorites_provider.dart';
 import '../providers/products_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/reviews_provider.dart';
+import '../models/review.dart';
 import 'login_screen.dart';
 import 'reservations_flow_screen.dart';
 import '../models/product.dart';
@@ -16,8 +20,7 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  int _qty = 1;
-  String? _variant;
+  // variables de cantidad/variante retiradas: reserva ahora se maneja en el flujo de reservas
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +39,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     final p = product;
 
+    final favProv = Provider.of<FavoritesProvider>(context);
+
     return Scaffold(
-      appBar: AppBar(title: Text(p.name)),
+      appBar: AppBar(title: Text(p.name), actions: [
+        IconButton(
+          icon: Icon(favProv.isFavorite(p.id) ? Icons.favorite : Icons.favorite_border, color: favProv.isFavorite(p.id) ? Colors.red : null),
+          onPressed: () => favProv.toggle(p.id),
+          tooltip: favProv.isFavorite(p.id) ? 'Quitar de favoritos' : 'Agregar a favoritos',
+        )
+      ]),
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(12),
@@ -71,33 +82,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
               SizedBox(height:8),
-              Card(
-                margin: EdgeInsets.symmetric(vertical:8),
-                child: Padding(padding: EdgeInsets.all(12), child: Row(children:[
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Control de Stock', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:6), Text('Stock actual: ${p.stock}')])),
-                  Column(children:[
-                    Text('Umbral'),
-                    SizedBox(height:6),
-                    ElevatedButton(onPressed: () async {
-                      final prov = Provider.of<ProductsProvider>(context, listen: false);
-                      final auth = Provider.of<AuthProvider>(context, listen: false);
-                      // solo administradores pueden establecer el umbral de reorden
-                      final role = (auth.user?.role ?? '').toLowerCase();
-                      if (role != 'admin'){
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Acceso denegado: solo administradores pueden cambiar el umbral')));
-                        return;
-                      }
-                      final current = prov.reorderLevelFor(p.id);
-                      final txtCtrl = TextEditingController(text: current.toString());
-                      final confirmed = await showDialog<int?>(context: context, builder: (_)=> AlertDialog(title: Text('Ajustar umbral de reorden'), content: TextField(controller: txtCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Umbral')), actions: [TextButton(onPressed: ()=> Navigator.of(context).pop(null), child: Text('Cancelar')), TextButton(onPressed: (){ final v = int.tryParse(txtCtrl.text.trim()) ?? current; Navigator.of(context).pop(v); }, child: Text('Guardar'))]));
-                      if (confirmed != null){
-                        await prov.setReorderLevel(p.id, confirmed);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Umbral actualizado')));
-                      }
-                    }, child: Text('Editar'))
-                  ])
-                ])),
-              ),
+              // Mostrar control de stock solo a administradores
+              Builder(builder: (ctx) {
+                final auth = Provider.of<AuthProvider>(ctx, listen: false);
+                final role = (auth.user?.role ?? '').toLowerCase();
+                if (role != 'admin') return SizedBox.shrink();
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical:8),
+                  child: Padding(padding: EdgeInsets.all(12), child: Row(children:[
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[Text('Control de Stock', style: TextStyle(fontWeight: FontWeight.w700)), SizedBox(height:6), Text('Stock actual: ${p.stock}')])),
+                    Column(children:[
+                      Text('Umbral'),
+                      SizedBox(height:6),
+                      ElevatedButton(onPressed: () async {
+                        final prov = Provider.of<ProductsProvider>(context, listen: false);
+                        final current = prov.reorderLevelFor(p.id);
+                        final txtCtrl = TextEditingController(text: current.toString());
+                        final confirmed = await showDialog<int?>(context: context, builder: (_)=> AlertDialog(title: Text('Ajustar umbral de reorden'), content: TextField(controller: txtCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Umbral')), actions: [TextButton(onPressed: ()=> Navigator.of(context).pop(null), child: Text('Cancelar')), TextButton(onPressed: (){ final v = int.tryParse(txtCtrl.text.trim()) ?? current; Navigator.of(context).pop(v); }, child: Text('Guardar'))]));
+                        if (confirmed != null){
+                          await prov.setReorderLevel(p.id, confirmed);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Umbral actualizado')));
+                        }
+                      }, child: Text('Editar'))
+                    ])
+                  ])),
+                );
+              }),
               SizedBox(height:8),
               Card(
                 margin: EdgeInsets.symmetric(vertical:8),
@@ -128,59 +138,94 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               SizedBox(height:12),
               Card(
                 margin: EdgeInsets.symmetric(vertical:8),
-                child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[
-                  Text('Comentarios', style: TextStyle(fontWeight: FontWeight.w700)),
-                  SizedBox(height:8),
-                  ListTile(leading: CircleAvatar(child: Text('MC')), title: Text('María C.'), subtitle: Text('Excelente guía y paisajes increíbles. Muy recomendable.')),
-                  Divider(),
-                  ListTile(leading: CircleAvatar(child: Text('JP')), title: Text('Juan P.'), subtitle: Text('Buena logística, volvería con la familia.'), trailing: Text('4.5'))
-                ])),
+                child: Padding(padding: EdgeInsets.all(12), child: Consumer<ReviewsProvider>(
+                  builder: (ctx, reviewsProv, _) {
+                    final targetType = p.category.toLowerCase().contains('finca') ? 'finca' : 'service';
+                    final items = reviewsProv.search(targetId: p.id, targetType: targetType);
+                    return Column(crossAxisAlignment: CrossAxisAlignment.start, children:[
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children:[
+                        Text('Comentarios', style: TextStyle(fontWeight: FontWeight.w700)),
+                        TextButton.icon(onPressed: ()=> _showAddCommentDialog(ctx, p, targetType), icon: Icon(Icons.add_comment), label: Text('Comentar'))
+                      ]),
+                      SizedBox(height:8),
+                      if (items.isEmpty) Center(child: Padding(padding: EdgeInsets.symmetric(vertical:12), child: Text('Sé el primero en comentar esta experiencia'))),
+                      ...items.map((r) => Column(children:[
+                        ListTile(leading: CircleAvatar(child: Text((r.authorId.isNotEmpty? r.authorId[0].toUpperCase() : 'A'))), title: Text(r.authorId), subtitle: Text(r.comment ?? ''), trailing: Text(r.rating.toString())),
+                        Divider()
+                      ])).toList(),
+                    ]);
+                  }
+                )),
               ),
               SizedBox(height: 12),
-              if (product.variants.isNotEmpty)
-                DropdownButton<String>(
-                  value: _variant ?? product.variants.first,
-                  items: product.variants
-                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() => _variant = v);
-                  },
-                ),
-              SizedBox(height: 8),
-              Row(children: [
-                Text('Cantidad:'),
-                SizedBox(width: 10),
-                IconButton(onPressed: () => setState(() => _qty = (_qty > 1 ? _qty - 1 : 1)), icon: Icon(Icons.remove)),
-                Text('$_qty'),
-                IconButton(onPressed: () => setState(() => _qty++), icon: Icon(Icons.add)),
-                Spacer(),
-                ElevatedButton(
-                  onPressed: () {
-                    final auth = Provider.of<AuthProvider>(context, listen: false);
-                    final redirect = ReservationsFlowScreen.routeName;
-                    final redirectArgs = {'id': product!.id, 'qty': _qty, 'variant': _variant};
-                    // solo clientes pueden acceder al flujo de reservas
-                    final allowed = ['cliente','client'];
-                    if (auth.isAuthenticated) {
-                      final role = (auth.user?.role ?? '').toLowerCase();
-                      if (allowed.contains(role)) {
-                        Navigator.of(context).pushNamed(redirect, arguments: redirectArgs);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Acceso restringido: se necesita una cuenta de cliente.')));
-                      }
-                    } else {
-                      // no autenticado -> redirigir al login con destino guardado
-                      Navigator.of(context).pushNamed(LoginScreen.routeName, arguments: {'redirect': redirect, 'redirectArgs': redirectArgs, 'allowedRoles': allowed});
-                    }
-                  },
-                  child: Text('Agregar reserva'),
-                )
-              ]),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: SafeArea(child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        color: Colors.white,
+        child: Row(children: [
+          Spacer(),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14)),
+            onPressed: () {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final redirect = ReservationsFlowScreen.routeName;
+              final redirectArgs = {'id': p.id, 'qty': 1};
+              final allowed = ['cliente', 'client'];
+              if (auth.isAuthenticated) {
+                final role = (auth.user?.role ?? '').toLowerCase();
+                if (allowed.contains(role)) {
+                  Navigator.of(context).pushNamed(redirect, arguments: redirectArgs);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Acceso restringido: se necesita una cuenta de cliente.')));
+                }
+              } else {
+                Navigator.of(context).pushNamed(LoginScreen.routeName, arguments: {'redirect': redirect, 'redirectArgs': redirectArgs, 'allowedRoles': allowed});
+              }
+            },
+            child: Text('Reservar'),
+          )
+        ]),
+      )),
     );
+  }
+
+  void _showAddCommentDialog(BuildContext context, Product p, String targetType) {
+    final _ctrl = TextEditingController();
+    final _nameCtrl = TextEditingController();
+    int _rating = 5;
+
+    showDialog(context: context, builder: (ctx){
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final isAuth = auth.isAuthenticated;
+      return StatefulBuilder(builder: (ctx, setState){
+        return AlertDialog(
+          title: Text('Agregar comentario'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (!isAuth) TextField(controller: _nameCtrl, decoration: InputDecoration(labelText: 'Tu nombre (opcional)')),
+            TextField(controller: _ctrl, decoration: InputDecoration(labelText: 'Comentario'), maxLines: 4),
+            SizedBox(height:8),
+            Row(children:[Text('Puntuación:'), SizedBox(width:8), DropdownButton<int>(value: _rating, items: [5,4,3,2,1].map((n)=> DropdownMenuItem(child: Text('$n'), value: n)).toList(), onChanged: (v)=> setState(()=> _rating = v ?? _rating))])
+          ])),
+          actions: [
+            TextButton(onPressed: ()=> Navigator.of(ctx).pop(), child: Text('Cancelar')),
+            ElevatedButton(onPressed: () async {
+              final authorId = isAuth ? (auth.user?.id ?? 'anon') : (_nameCtrl.text.trim().isEmpty ? 'anon' : _nameCtrl.text.trim());
+              final id = Uuid().v4();
+              final r = Review(id: id, targetId: p.id, targetType: targetType, authorId: authorId, rating: _rating, comment: _ctrl.text.trim());
+              try{
+                await Provider.of<ReviewsProvider>(context, listen: false).addReview(r);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Comentario agregado')));
+              }catch(e){
+                showDialog(context: context, builder: (_)=> AlertDialog(title: Text('Error'), content: Text(e.toString()), actions: [TextButton(onPressed: ()=> Navigator.of(context).pop(), child: Text('Cerrar'))]));
+              }
+            }, child: Text('Enviar'))
+          ],
+        );
+      });
+    });
   }
 }

@@ -1,7 +1,9 @@
 // parte juanjo
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../data/mock_clients.dart';
 
 /// Proveedor que gestiona los clientes y campañas relacionadas.
@@ -44,7 +46,7 @@ class ClientsProvider with ChangeNotifier {
   Future<void> _loadAll() async {
     _loading = true;
     notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final rawClients = prefs.getString(_clientsKey);
     final rawCampaigns = prefs.getString(_campaignsKey);
     final rawAudit = prefs.getString(_auditKey);
@@ -90,18 +92,21 @@ class ClientsProvider with ChangeNotifier {
   }
 
   Future<void> _saveClients() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_clientsKey, jsonEncode(_clients));
+    final prefs = Prefs.instance;
+    final enc = await compute(encodeToJson, _clients);
+    await prefs.setString(_clientsKey, enc).catchError((_) => false);
   }
 
   Future<void> _saveCampaigns() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_campaignsKey, jsonEncode(_campaigns));
+    final prefs = Prefs.instance;
+    final enc = await compute(encodeToJson, _campaigns);
+    await prefs.setString(_campaignsKey, enc).catchError((_) => false);
   }
 
   Future<void> _saveAudit() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_auditKey, jsonEncode(_audit));
+    final prefs = Prefs.instance;
+    final enc = await compute(encodeToJson, _audit);
+    await prefs.setString(_auditKey, enc).catchError((_) => false);
   }
 
   Future<String> addClient(Map<String, dynamic> data, {Map<String,String>? actor}) async {
@@ -112,8 +117,7 @@ class ClientsProvider with ChangeNotifier {
     entry['active'] = entry['active'] ?? true;
     _clients.insert(0, entry);
     _audit.insert(0, {'action':'create_client','clientId': id, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String(), 'data': entry});
-    await _saveClients();
-    await _saveAudit();
+    _scheduleSave();
     notifyListeners();
     return id;
   }
@@ -124,8 +128,7 @@ class ClientsProvider with ChangeNotifier {
       final prev = Map<String,dynamic>.from(_clients[idx]);
       _clients[idx] = {..._clients[idx], ...data};
       _audit.insert(0, {'action':'update_client','clientId': id, 'previous': prev, 'new': _clients[idx], 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String()});
-      await _saveClients();
-      await _saveAudit();
+      _scheduleSave();
       notifyListeners();
     }
   }
@@ -134,9 +137,27 @@ class ClientsProvider with ChangeNotifier {
     final removed = _clients.firstWhere((c)=> c['id']==id, orElse: ()=> {});
     _clients.removeWhere((c) => c['id'] == id);
     _audit.insert(0, {'action':'delete_client','clientId': id, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String(), 'data': removed});
-    await _saveClients();
-    await _saveAudit();
+    _scheduleSave();
     notifyListeners();
+  }
+
+  Timer? _saveTimer;
+  static const Duration _saveDebounce = Duration(milliseconds: 700);
+
+  void _scheduleSave(){
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_saveDebounce, () async {
+      try {
+        await _saveClients();
+        await _saveAudit();
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose(){
+    _saveTimer?.cancel();
+    super.dispose();
   }
 
   Map<String, dynamic>? getById(String id) {

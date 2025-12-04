@@ -1,7 +1,9 @@
 // parte isa
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../services/reservations_service.dart';
 import '../utils/date_utils.dart';
 import '../data/mock_reservations.dart';
 
@@ -24,6 +26,8 @@ class ReservationsProvider with ChangeNotifier {
   List<Map<String, dynamic>> _reservations = [];
   final List<Map<String,dynamic>> _audit = [];
   bool _loading = true;
+  Timer? _saveTimer;
+  static const Duration _saveDebounce = Duration(milliseconds: 600);
 
   bool get loading => _loading;
 
@@ -31,22 +35,49 @@ class ReservationsProvider with ChangeNotifier {
     loadReservations();
   }
 
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
+
   List<Map<String, dynamic>> get reservations => List.unmodifiable(_reservations);
 
   Future<void> loadReservations() async {
     _loading = true;
     notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
-    if (raw == null) {
-      _reservations = List<Map<String,dynamic>>.from(mockReservations);
-      await _saveToPrefs();
-    } else {
-      try {
-        final decoded = jsonDecode(raw) as List<dynamic>;
-        _reservations = decoded.map((e) => Map<String,dynamic>.from(e as Map)).toList();
-      } catch (e) {
+    final prefs = Prefs.instance;
+    try {
+      final api = await ReservationsService.instance.list();
+      if (api.isNotEmpty) {
+        _reservations = api;
+        await _saveToPrefs();
+      } else {
+        final raw = prefs.getString(_prefsKey);
+        if (raw == null) {
+          _reservations = List<Map<String,dynamic>>.from(mockReservations);
+          await _saveToPrefs();
+        } else {
+          try {
+            final decoded = jsonDecode(raw) as List<dynamic>;
+            _reservations = decoded.map((e) => Map<String,dynamic>.from(e as Map)).toList();
+          } catch (e) {
+            _reservations = List<Map<String,dynamic>>.from(mockReservations);
+          }
+        }
+      }
+    } catch (e) {
+      final raw = prefs.getString(_prefsKey);
+      if (raw == null) {
         _reservations = List<Map<String,dynamic>>.from(mockReservations);
+        await _saveToPrefs();
+      } else {
+        try {
+          final decoded = jsonDecode(raw) as List<dynamic>;
+          _reservations = decoded.map((e) => Map<String,dynamic>.from(e as Map)).toList();
+        } catch (e) {
+          _reservations = List<Map<String,dynamic>>.from(mockReservations);
+        }
       }
     }
     _loading = false;
@@ -54,13 +85,16 @@ class ReservationsProvider with ChangeNotifier {
   }
 
   Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_reservations));
+    final prefs = Prefs.instance;
+    // Use compute to serialize JSON off the UI thread
+    final encoded = await compute(_encodeListToJson, _reservations);
+    await prefs.setString(_prefsKey, encoded);
   }
 
   Future<void> _saveAuditToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('reservations_audit', jsonEncode(_audit));
+    final prefs = Prefs.instance;
+    final encoded = await compute(_encodeListToJson, _audit);
+    await prefs.setString('reservations_audit', encoded);
   }
 
   Future<String> addReservation(Map<String, dynamic> data) async {
@@ -80,11 +114,24 @@ class ReservationsProvider with ChangeNotifier {
       throw Exception('Duplicidad: ya existe una programación para este servicio en la misma fecha y hora.');
     }
 
+    // Try to create on API, fallback to local
+    try {
+      final createdId = await ReservationsService.instance.create(entry);
+      if (createdId != null) {
+        entry['id'] = createdId;
+        _reservations.insert(0, entry);
+        _audit.insert(0, {'action':'create_reservation','reservationId': createdId, 'data': entry, 'timestamp': DateTime.now().toIso8601String()});
+        await _saveToPrefs();
+        notifyListeners();
+        return createdId;
+      }
+    } catch (_) {
+      // ignore and fallback
+    }
     _reservations.insert(0, entry);
     _audit.insert(0, {'action':'create_reservation','reservationId': id, 'data': entry, 'timestamp': DateTime.now().toIso8601String()});
-    await _saveToPrefs();
-    await _saveAuditToPrefs();
     notifyListeners();
+    _scheduleSave();
     return id;
   }
 
@@ -109,11 +156,21 @@ class ReservationsProvider with ChangeNotifier {
       }
 
       final prev = Map<String,dynamic>.from(_reservations[idx]);
+      // Try API update first
+      try {
+        await ReservationsService.instance.update(id, merged);
+        _reservations[idx] = merged;
+        _audit.insert(0, {'action':'update_reservation','reservationId': id, 'previous': prev, 'new': merged, 'timestamp': DateTime.now().toIso8601String()});
+        await _saveToPrefs();
+        notifyListeners();
+        return;
+      } catch (_) {
+        // fallback to local
+      }
       _reservations[idx] = merged;
       _audit.insert(0, {'action':'update_reservation','reservationId': id, 'previous': prev, 'new': _reservations[idx], 'timestamp': DateTime.now().toIso8601String()});
-      await _saveToPrefs();
-      await _saveAuditToPrefs();
       notifyListeners();
+      _scheduleSave();
     }
   }
 
@@ -126,9 +183,17 @@ class ReservationsProvider with ChangeNotifier {
       throw Exception('No se puede eliminar una actividad en curso.');
     }
     final removed = _reservations.removeAt(idx);
+    try {
+      await ReservationsService.instance.delete(id);
+      _audit.insert(0, {'action':'delete_reservation','reservationId': id, 'data': removed, 'timestamp': DateTime.now().toIso8601String()});
+      await _saveToPrefs();
+      notifyListeners();
+      return;
+    } catch (_) {
+      // fallback
+    }
     _audit.insert(0, {'action':'delete_reservation','reservationId': id, 'data': removed, 'timestamp': DateTime.now().toIso8601String()});
-    await _saveToPrefs();
-    await _saveAuditToPrefs();
+    _scheduleSave();
     notifyListeners();
   }
 
@@ -195,6 +260,7 @@ class ReservationsProvider with ChangeNotifier {
     if (replace) _reservations = entries;
     else _reservations.insertAll(0, entries);
     _audit.insert(0, {'action':'import_reservations','count': entries.length, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String()});
+    // For import we persist immediately because it's a bulk replace operation
     await _saveToPrefs(); await _saveAuditToPrefs(); notifyListeners();
   }
 
@@ -203,9 +269,20 @@ class ReservationsProvider with ChangeNotifier {
     // El flag `confirm` se deja por compatibilidad de API; los llamadores pueden invocar sin confirmación
     _reservations = List<Map<String,dynamic>>.from(mockReservations);
     _audit.insert(0, {'action': 'reset_to_mock', 'count': _reservations.length, 'timestamp': DateTime.now().toIso8601String()});
-    await _saveToPrefs();
-    await _saveAuditToPrefs();
+    _scheduleSave();
     notifyListeners();
+  }
+
+  void _scheduleSave(){
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_saveDebounce, () async {
+      try {
+        await _saveToPrefs();
+        await _saveAuditToPrefs();
+      } catch (e) {
+        // ignore errors to avoid crashing UI; could log to analytics
+      }
+    });
   }
 
   List<Map<String,dynamic>> get audit => List.unmodifiable(_audit);
@@ -226,5 +303,18 @@ class ReservationsProvider with ChangeNotifier {
       final rt = (r['time'] ?? '').toString();
       return rs == sNorm && rd == date && rt == time;
     });
+  }
+}
+
+// Top-level helper for compute(): encode a list to JSON string off the UI thread.
+String _encodeListToJson(List<dynamic> list) {
+  try {
+    return jsonEncode(list);
+  } catch (e) {
+    // Fallback: try to convert each entry to Map and encode
+    final safe = list.map((e){
+      try { return Map<String,dynamic>.from(e as Map); } catch (_) { return e; }
+    }).toList();
+    return jsonEncode(safe);
   }
 }

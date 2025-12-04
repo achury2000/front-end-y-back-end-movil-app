@@ -5,7 +5,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../models/finca.dart';
 import '../data/mock_fincas.dart';
 
@@ -37,7 +38,7 @@ class FincasProvider with ChangeNotifier {
 
   Future<void> _ensureLoaded() async {
     if (_items.isNotEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -62,9 +63,11 @@ class FincasProvider with ChangeNotifier {
   }
 
   Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, Finca.encodeList(_items));
-    await prefs.setString(_auditKey, jsonEncode(_audit));
+    final prefs = Prefs.instance;
+    final encoded = await compute(encodeToJson, _items.map((e)=> e.toJson()).toList());
+    await prefs.setString(_prefsKey, encoded).catchError((_) => false);
+    final encAudit = await compute(encodeToJson, _audit);
+    await prefs.setString(_auditKey, encAudit).catchError((_) => false);
   }
 
   Future<void> loadAll() async {

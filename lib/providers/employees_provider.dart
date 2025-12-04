@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../data/mock_employees.dart';
 
 /// Proveedor para gestión de empleados.
@@ -12,6 +14,8 @@ class EmployeesProvider with ChangeNotifier {
   static const _prefsKey = 'employees';
 
   List<Map<String, String>> _employees = [];
+  Timer? _saveTimer;
+  static const Duration _saveDebounce = Duration(milliseconds: 600);
 
   EmployeesProvider(){
     loadEmployees();
@@ -20,7 +24,7 @@ class EmployeesProvider with ChangeNotifier {
   List<Map<String, String>> get employees => List.unmodifiable(_employees);
 
   Future<void> loadEmployees() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw == null) {
       _employees = mockEmployees.map((e) => Map<String,String>.fromEntries(
@@ -43,8 +47,9 @@ class EmployeesProvider with ChangeNotifier {
   }
 
   Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_employees));
+    final prefs = Prefs.instance;
+    final encoded = await compute(encodeToJson, _employees);
+    await prefs.setString(_prefsKey, encoded).catchError((_) => false);
   }
 
   Future<void> addEmployee(Map<String,String> emp) async {
@@ -52,7 +57,7 @@ class EmployeesProvider with ChangeNotifier {
     final newEmp = Map<String,String>.from(emp);
     newEmp['id'] = id;
     _employees.insert(0, newEmp);
-    await _saveToPrefs();
+    _scheduleSave();
     notifyListeners();
   }
 
@@ -60,14 +65,29 @@ class EmployeesProvider with ChangeNotifier {
     final idx = _employees.indexWhere((e) => e['id'] == id);
     if (idx >= 0) {
       _employees[idx] = {..._employees[idx], ...data};
-      await _saveToPrefs();
+      _scheduleSave();
       notifyListeners();
     }
   }
 
   Future<void> deleteEmployee(String id) async {
     _employees.removeWhere((e) => e['id'] == id);
-    await _saveToPrefs();
+    _scheduleSave();
     notifyListeners();
+  }
+
+  void _scheduleSave(){
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_saveDebounce, () async {
+      try {
+        await _saveToPrefs();
+      } catch(_){}
+    });
+  }
+
+  @override
+  void dispose(){
+    _saveTimer?.cancel();
+    super.dispose();
   }
 }

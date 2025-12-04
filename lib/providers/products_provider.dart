@@ -2,9 +2,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/json_helpers.dart';
+import '../utils/prefs.dart';
 import '../models/product.dart';
 import '../data/mock_products.dart';
+import '../services/products_service.dart';
 
 enum ProductSort { priceAsc, priceDesc, nameAsc, popularity }
 
@@ -15,6 +17,8 @@ enum ProductSort { priceAsc, priceDesc, nameAsc, popularity }
 /// - Índice en memoria para búsquedas rápidas, paginación y control de stock.
 /// - Import/Export CSV y registro histórico de stock.
 class ProductsProvider with ChangeNotifier {
+  Timer? _saveTimer;
+  static const Duration _saveDebounce = Duration(milliseconds: 700);
   List<Product> _items = [];
   List<Product> _allItems = [];
   bool _loading = false;
@@ -40,17 +44,39 @@ class ProductsProvider with ChangeNotifier {
 
   Future<void> _ensureLoaded() async {
     if (_items.isNotEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
-    if (raw != null && raw.isNotEmpty) {
-      try {
-        _allItems = Product.decodeList(raw);
-      } catch (_) {
-        _allItems = List.from(mockProducts);
+    final prefs = Prefs.instance;
+    // Try to load from API first; fallback to prefs/mocks on error
+    try {
+      final apiItems = await ProductsService.instance.list();
+      if (apiItems.isNotEmpty) {
+        _allItems = apiItems;
+        // persist cache
+        await _saveToPrefs();
+      } else {
+        final raw = prefs.getString(_prefsKey);
+        if (raw != null && raw.isNotEmpty) {
+          try {
+            _allItems = Product.decodeList(raw);
+          } catch (_) {
+            _allItems = List.from(mockProducts);
+          }
+        } else {
+          _allItems = List.from(mockProducts);
+          await _saveToPrefs();
+        }
       }
-    } else {
-      _allItems = List.from(mockProducts);
-      await _saveToPrefs();
+    } catch (_) {
+      final raw = prefs.getString(_prefsKey);
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          _allItems = Product.decodeList(raw);
+        } catch (_) {
+          _allItems = List.from(mockProducts);
+        }
+      } else {
+        _allItems = List.from(mockProducts);
+        await _saveToPrefs();
+      }
     }
     // load stock history
     final shRaw = prefs.getString(_stockHistoryKey);
@@ -75,19 +101,22 @@ class ProductsProvider with ChangeNotifier {
   }
 
   Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, Product.encodeList(_allItems));
+    final prefs = Prefs.instance;
+    // Offload encoding to isolate, then persist in background to avoid blocking UI
+    final encoded = await compute(encodeToJson, _allItems.map((e) => e.toJson()).toList());
+    await prefs.setString(_prefsKey, encoded).catchError((_) => false);
   }
 
   Future<void> _saveStockHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final enc = jsonEncode(_stockHistory);
-    await prefs.setString(_stockHistoryKey, enc);
+    final prefs = Prefs.instance;
+    final enc = await compute(encodeToJson, _stockHistory);
+    await prefs.setString(_stockHistoryKey, enc).catchError((_) => false);
   }
 
   Future<void> _saveReorderLevels() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_reorderLevelsKey, jsonEncode(_reorderLevels));
+    final prefs = Prefs.instance;
+    final enc = await compute(encodeToJson, _reorderLevels);
+    await prefs.setString(_reorderLevelsKey, enc).catchError((_) => false);
   }
 
   Future<void> loadInitial({String? category, String? query, ProductSort? sort}) async {
@@ -192,7 +221,7 @@ class ProductsProvider with ChangeNotifier {
     final codeExists = _allItems.any((p) => p.code.toLowerCase() == product.code.toLowerCase());
     if (codeExists) throw Exception('Ya existe un servicio con ese código');
     _allItems.insert(0, product);
-    await _saveToPrefs();
+    _scheduleSave();
     _rebuildIndex();
     _items = _allItems.take((_page + 1) * _pageSize).toList();
     notifyListeners();
@@ -210,11 +239,11 @@ class ProductsProvider with ChangeNotifier {
     // if stock changed, register history
     final prevStock = _allItems[index].stock;
     _allItems[index] = product;
-    await _saveToPrefs();
+    _scheduleSave();
     if (product.stock != prevStock) {
       final entry = {'productId': product.id, 'timestamp': DateTime.now().toIso8601String(), 'previous': prevStock, 'new': product.stock, 'reason': reason ?? 'manual', 'actor': actor ?? {}};
       _stockHistory.putIfAbsent(product.id, ()=>[]).insert(0, entry);
-      await _saveStockHistory();
+      _scheduleSave();
     }
     _rebuildIndex();
     _items = _allItems.take((_page + 1) * _pageSize).toList();
@@ -223,9 +252,9 @@ class ProductsProvider with ChangeNotifier {
 
   Future<void> deleteProduct(String id) async {
     _allItems.removeWhere((p) => p.id == id);
-    await _saveToPrefs();
+    _scheduleSave();
     _stockHistory.remove(id);
-    await _saveStockHistory();
+    _scheduleSave();
     _rebuildIndex();
     _items = _allItems.take((_page + 1) * _pageSize).toList();
     notifyListeners();
@@ -238,7 +267,7 @@ class ProductsProvider with ChangeNotifier {
   int reorderLevelFor(String productId) => _reorderLevels[productId] ?? _defaultReorderLevel;
   Future<void> setReorderLevel(String productId, int level) async {
     _reorderLevels[productId] = level;
-    await _saveReorderLevels();
+    _scheduleSave();
     notifyListeners();
   }
 
@@ -283,10 +312,30 @@ class ProductsProvider with ChangeNotifier {
         _allItems.insert(0, prod);
       }
     }
+    // Keep import persistence immediate because it's a bulk operation
     await _saveToPrefs();
     _rebuildIndex();
     _items = _allItems.take((_page + 1) * _pageSize).toList();
     notifyListeners();
+  }
+
+  void _scheduleSave(){
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_saveDebounce, () async {
+      try {
+        await _saveToPrefs();
+        await _saveStockHistory();
+        await _saveReorderLevels();
+      } catch (e) {
+        // ignore errors
+      }
+    });
+  }
+
+  @override
+  void dispose(){
+    _saveTimer?.cancel();
+    super.dispose();
   }
 
   String _escape(String s){

@@ -1,7 +1,8 @@
 // parte juanjo
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 
 class SalesProvider with ChangeNotifier {
   static const _prefsKey = 'sales_v1';
@@ -14,7 +15,7 @@ class SalesProvider with ChangeNotifier {
   List<Map<String,dynamic>> get audit => List.unmodifiable(_audit);
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = Prefs.instance;
     final raw = prefs.getString(_prefsKey);
     if (raw != null) {
       try {
@@ -35,13 +36,24 @@ class SalesProvider with ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(_sales));
+    // Serialize off the UI thread and persist in background.
+    final encoded = await compute(encodeToJson, _sales);
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString(_prefsKey, encoded);
+      } catch (_) {}
+    });
   }
 
   Future<void> _saveAudit() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('sales_audit', jsonEncode(_audit));
+    final encoded = await compute(encodeToJson, _audit);
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString('sales_audit', encoded);
+      } catch (_) {}
+    });
   }
 
   Future<String> addSale(Map<String,dynamic> s, {Map<String,String>? actor}) async {
@@ -52,8 +64,9 @@ class SalesProvider with ChangeNotifier {
     entry['status'] = entry['status'] ?? 'Pendiente';
     _sales.insert(0, entry);
     _audit.insert(0, {'action':'create_sale','saleId': id, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String(), 'data': entry});
-    await _save();
-    await _saveAudit();
+    // Persist in background to avoid blocking UI
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
     notifyListeners();
     return id;
   }
@@ -72,7 +85,9 @@ class SalesProvider with ChangeNotifier {
     final prev = Map<String,dynamic>.from(_sales[idx]);
     _sales[idx] = {..._sales[idx], ...changes};
     _audit.insert(0, {'action':'update_sale','saleId': id, 'previous': prev, 'new': _sales[idx], 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String()});
-    await _save(); await _saveAudit(); notifyListeners();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
+    notifyListeners();
   }
 
   Future<void> deleteSale(String id, {Map<String,String>? actor}) async {
@@ -80,7 +95,9 @@ class SalesProvider with ChangeNotifier {
     if (idx < 0) return;
     final removed = _sales.removeAt(idx);
     _audit.insert(0, {'action':'delete_sale','saleId': id, 'actor': actor ?? {}, 'timestamp': DateTime.now().toIso8601String(), 'data': removed});
-    await _save(); await _saveAudit(); notifyListeners();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
+    notifyListeners();
   }
 
   // simple search with filters

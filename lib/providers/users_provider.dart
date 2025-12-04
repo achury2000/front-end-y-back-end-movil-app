@@ -1,9 +1,12 @@
 // parte linsaith
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/prefs.dart';
+import '../utils/json_helpers.dart';
 import '../data/mock_users.dart';
 import '../models/user.dart';
+import '../services/users_service.dart';
 
 class UsersProvider with ChangeNotifier {
   static const _prefsKey = 'users_v1';
@@ -18,32 +21,44 @@ class UsersProvider with ChangeNotifier {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
-    if (raw == null) {
-      _users = List<User>.from(mockUsers);
-      await _save();
-    } else {
-      try {
-        final decoded = jsonDecode(raw) as List<dynamic>;
-        _users = decoded.map((m) => User(
-          id: m['id'] as String,
-          name: m['name'] as String,
-          email: m['email'] as String,
-          role: m['role'] as String? ?? 'customer',
-          phone: m['phone'] as String?,
-          address: m['address'] as String?,
-          active: m['active'] as bool? ?? true,
-        )).toList();
-      } catch (e) {
+    final prefs = Prefs.instance;
+    try {
+      final api = await UsersService.instance.list();
+      if (api.isNotEmpty) {
+        _users = api.map((m) => User.fromJson(m)).toList();
+        await _save();
+      } else {
+        final raw = prefs.getString(_prefsKey);
+        if (raw == null) {
+          _users = List<User>.from(mockUsers);
+          await _save();
+        } else {
+          try {
+            final decoded = jsonDecode(raw) as List<dynamic>;
+            _users = decoded.map((m) => User.fromJson(Map<String,dynamic>.from(m as Map))).toList();
+          } catch (e) {
+            _users = List<User>.from(mockUsers);
+          }
+        }
+      }
+    } catch (_) {
+      final raw = prefs.getString(_prefsKey);
+      if (raw == null) {
         _users = List<User>.from(mockUsers);
+        await _save();
+      } else {
+        try {
+          final decoded = jsonDecode(raw) as List<dynamic>;
+          _users = decoded.map((m) => User.fromJson(Map<String,dynamic>.from(m as Map))).toList();
+        } catch (e) {
+          _users = List<User>.from(mockUsers);
+        }
       }
     }
     notifyListeners();
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
     final data = _users.map((u) => {
       'id': u.id,
       'name': u.name,
@@ -53,12 +68,23 @@ class UsersProvider with ChangeNotifier {
       'address': u.address,
       'active': u.active,
     }).toList();
-    await prefs.setString(_prefsKey, jsonEncode(data));
+    final encoded = await compute(encodeToJson, data);
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString(_prefsKey, encoded);
+      } catch (_) {}
+    });
   }
 
   Future<void> _saveAudit() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('users_audit', jsonEncode(_audit));
+    final encoded = await compute(encodeToJson, _audit);
+    Future(() async {
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString('users_audit', encoded);
+      } catch (_) {}
+    });
   }
 
   List<Map<String, dynamic>> get audit => List.unmodifiable(_audit);
@@ -90,8 +116,8 @@ class UsersProvider with ChangeNotifier {
         'role': user.role
       }
     });
-    await _save();
-    await _saveAudit();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
     notifyListeners();
   }
 
@@ -114,8 +140,8 @@ class UsersProvider with ChangeNotifier {
         'timestamp': DateTime.now().toIso8601String(),
         'changes': data
       });
-      await _save();
-      await _saveAudit();
+      _save().catchError((_){});
+      _saveAudit().catchError((_){});
       notifyListeners();
     }
   }
@@ -131,8 +157,8 @@ class UsersProvider with ChangeNotifier {
         'actor': actor ?? {},
         'timestamp': DateTime.now().toIso8601String(),
       });
-      await _save();
-      await _saveAudit();
+      _save().catchError((_){});
+      _saveAudit().catchError((_){});
       notifyListeners();
     }
   }
@@ -145,8 +171,8 @@ class UsersProvider with ChangeNotifier {
       'actor': actor ?? {},
       'timestamp': DateTime.now().toIso8601String(),
     });
-    await _save();
-    await _saveAudit();
+    _save().catchError((_){});
+    _saveAudit().catchError((_){});
     notifyListeners();
   }
 
@@ -154,10 +180,12 @@ class UsersProvider with ChangeNotifier {
     final idx = _users.indexWhere((u) => u.id == id);
     if (idx >= 0) {
       _users[idx].role = role;
-      await _save();
+      _save().catchError((_){});
       // also persist a per-user key to help AuthProvider pick up changes
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('userRole_' + id, role);
+      try {
+        final prefs = Prefs.instance;
+        await prefs.setString('userRole_' + id, role);
+      } catch (_) {}
       notifyListeners();
     }
   }
